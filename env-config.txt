@@ -1,0 +1,40 @@
+# Copie este conteúdo para o arquivo .env na raiz do projeto
+
+# Environment
+NODE_ENV=development
+PORT=5000
+
+# Database - MongoDB Atlas
+# OPÇÃO 1: Usuário atual (se a senha estiver correta)
+MONGODB_URI=mongodb+srv://swaply-admin:Swaply2025@swaplydb.ma7lrhg.mongodb.net/swaply?retryWrites=true&w=majority&appName=SwaplyDB
+
+# OPÇÃO 2: Usuário novo (crie no Atlas)
+# MONGODB_URI=mongodb+srv://swaply-user:123456@swaplydb.ma7lrhg.mongodb.net/swaply?retryWrites=true&w=majority&appName=SwaplyDB
+
+# JWT (OBRIGATÓRIO)
+JWT_SECRET=swaply_jwt_secret_key_super_segura_para_desenvolvimento_123456789
+JWT_REFRESH_SECRET=swaply_refresh_secret_key_super_segura_para_desenvolvimento_987654321
+JWT_EXPIRES_IN=24h
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Frontend URL
+FRONTEND_URL=http://localhost:3000
+
+# Cloudinary (para upload de imagens) - configure depois
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+# Email (opcional) - configure depois
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=
+EMAIL_PASS=
+
+# Zoom API (opcional) - configure depois
+ZOOM_API_KEY=
+ZOOM_API_SECRET=
+
+# Google OAuth (opcional) - configure depois
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
