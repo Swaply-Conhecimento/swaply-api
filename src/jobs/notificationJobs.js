@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const NotificationService = require('../services/notificationService');
-const Class = require('../models/Class');
+const ScheduledClass = require('../models/ScheduledClass');
+const schedulingService = require('../services/schedulingService');
 
 // Limpar notificações antigas (todo domingo às 2h)
 const setupCleanupJob = () => {
@@ -19,53 +20,19 @@ const setupCleanupJob = () => {
   console.log('📅 Job de limpeza de notificações configurado (Domingos às 2h)');
 };
 
-// Lembretes de aula (verificar a cada 5 minutos)
+// Lembretes de aula (verificar a cada 15 minutos para aulas em 1 hora)
 const setupClassRemindersJob = () => {
-  cron.schedule('*/5 * * * *', async () => {
+  cron.schedule('*/15 * * * *', async () => {
     try {
-      // Buscar aulas que começam em 30 minutos
-      const now = new Date();
-      const reminderTime = new Date(now.getTime() + 30 * 60 * 1000); // 30 minutos no futuro
-      const reminderTimeEnd = new Date(now.getTime() + 35 * 60 * 1000); // 35 minutos no futuro
-
-      const upcomingClasses = await Class.find({
-        date: {
-          $gte: new Date(reminderTime.toDateString()), // Mesmo dia
-          $lt: new Date(new Date(reminderTime.toDateString()).getTime() + 24 * 60 * 60 * 1000) // Próximo dia
-        },
-        status: { $in: ['scheduled', 'confirmed'] },
-        reminderSent: { $ne: true }
-      })
-        .populate('studentId', 'name email')
-        .populate('instructorId', 'name')
-        .populate('courseId', 'title');
-
-      for (const classItem of upcomingClasses) {
-        // Verificar se a aula está no horário de lembrete (30 minutos antes)
-        const classDateTime = new Date(classItem.date);
-        const [hours, minutes] = classItem.time.split(':');
-        classDateTime.setHours(parseInt(hours), parseInt(minutes));
-
-        const timeDiff = classDateTime.getTime() - now.getTime();
-        const minutesUntilClass = Math.floor(timeDiff / (1000 * 60));
-
-        // Se está entre 25 e 35 minutos, enviar lembrete
-        if (minutesUntilClass >= 25 && minutesUntilClass <= 35) {
-          await NotificationService.createClassReminder(
-            classItem.studentId._id,
-            classItem.courseId.title,
-            classItem.instructorId.name,
-            30
-          );
-
-          // Marcar lembrete como enviado
-          classItem.reminderSent = true;
-          await classItem.save();
-
-          console.log(`📧 Lembrete enviado para ${classItem.studentId.name} - Aula: ${classItem.courseId.title}`);
-        }
+      console.log('⏰ Verificando aulas para enviar lembretes...');
+      
+      // Usar o método do schedulingService para enviar lembretes
+      // Envia lembretes para aulas que começam em até 60 minutos
+      const remindersCount = await schedulingService.sendClassReminders(60);
+      
+      if (remindersCount > 0) {
+        console.log(`✅ ${remindersCount} lembrete(s) enviado(s) com sucesso`);
       }
-
     } catch (error) {
       console.error('❌ Erro ao enviar lembretes de aula:', error);
     }
@@ -73,7 +40,34 @@ const setupClassRemindersJob = () => {
     timezone: "America/Sao_Paulo"
   });
 
-  console.log('⏰ Job de lembretes de aula configurado (a cada 5 minutos)');
+  console.log('⏰ Job de lembretes de aula configurado (a cada 15 minutos)');
+};
+
+// Atualizar status de aulas que passaram (verificar a cada hora)
+const setupUpdateMissedClassesJob = () => {
+  cron.schedule('0 * * * *', async () => {
+    try {
+      const now = new Date();
+      
+      // Buscar aulas agendadas que já passaram
+      const result = await ScheduledClass.updateMany({
+        status: 'scheduled',
+        date: { $lt: now }
+      }, {
+        $set: { status: 'missed' }
+      });
+
+      if (result.modifiedCount > 0) {
+        console.log(`📝 ${result.modifiedCount} aula(s) marcada(s) como perdida(s)`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao atualizar status de aulas:', error);
+    }
+  }, {
+    timezone: "America/Sao_Paulo"
+  });
+
+  console.log('📝 Job de atualização de aulas perdidas configurado (a cada hora)');
 };
 
 // Notificações de novos cursos (verificar a cada hora)
@@ -128,6 +122,7 @@ const initializeNotificationJobs = () => {
   
   setupCleanupJob();
   setupClassRemindersJob();
+  setupUpdateMissedClassesJob();
   setupNewCourseNotificationsJob();
   
   console.log('✅ Todos os jobs de notificações configurados');
@@ -144,6 +139,7 @@ module.exports = {
   stopNotificationJobs,
   setupCleanupJob,
   setupClassRemindersJob,
+  setupUpdateMissedClassesJob,
   setupNewCourseNotificationsJob
 };
 

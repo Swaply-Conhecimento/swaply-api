@@ -16,6 +16,7 @@ const {
   uploadCourseImage,
   getCourseReviews
 } = require('../controllers/courseController');
+const { getCourseAvailability } = require('../controllers/classController');
 const {
   createReview,
   updateReview,
@@ -83,6 +84,12 @@ router.get('/:id/reviews',
   getCourseReviews
 );
 
+router.get('/:id/availability',
+  paramValidators.id,
+  handleValidationErrors,
+  getCourseAvailability
+);
+
 // Rotas que requerem autenticação
 router.use(authenticate);
 
@@ -106,9 +113,8 @@ router.delete('/:id/unenroll',
   unenrollFromCourse
 );
 
-// Rotas que requerem ser instrutor
+// Rotas de criação de curso (qualquer usuário autenticado pode criar)
 router.post('/',
-  requireInstructor,
   sanitizeInput,
   courseValidators.create,
   handleValidationErrors,

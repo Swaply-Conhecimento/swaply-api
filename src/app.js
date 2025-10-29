@@ -14,6 +14,8 @@ require('./config/auth');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const courseRoutes = require('./routes/courses');
+const classRoutes = require('./routes/classes');
+const instructorRoutes = require('./routes/instructors');
 const notificationRoutes = require('./routes/notifications');
 
 const app = express();
@@ -55,7 +57,9 @@ const corsOptions = {
       process.env.FRONTEND_URL,
       'http://localhost:3000',
       'http://localhost:3001',
-      'https://swaply.vercel.app'
+      'http://localhost:5173', // Vite
+      'https://swaply.vercel.app',
+      'https://swaply-web.vercel.app'
     ];
     
     if (allowedOrigins.includes(origin)) {
@@ -153,6 +157,8 @@ app.get('/api', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/classes', classRoutes);
+app.use('/api/instructors', instructorRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Rota para servir arquivos estáticos (uploads)

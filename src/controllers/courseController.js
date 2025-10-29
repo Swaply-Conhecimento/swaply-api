@@ -285,9 +285,10 @@ const createCourse = asyncHandler(async (req, res) => {
   const course = new Course(courseData);
   await course.save();
 
-  // Atualizar estatísticas do instrutor
+  // Atualizar estatísticas do usuário
   await User.findByIdAndUpdate(req.user._id, {
-    $inc: { 'stats.coursesTeaching': 1 }
+    $inc: { 'stats.coursesTeaching': 1 },
+    $set: { isInstructor: true } // Garantir que está marcado (redundante mas seguro)
   });
 
   const populatedCourse = await Course.findById(course._id)

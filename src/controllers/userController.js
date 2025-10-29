@@ -7,6 +7,7 @@ const { validationResult } = require('express-validator');
 const { createApiResponse } = require('../utils/helpers');
 const { paymentService } = require('../services/paymentService');
 const { sendAccountDeletedEmail } = require('../services/emailService');
+const schedulingService = require('../services/schedulingService');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 // Obter perfil do usuário
@@ -395,23 +396,24 @@ const getTeachingCourses = asyncHandler(async (req, res) => {
 });
 
 // Tornar-se instrutor
+// DEPRECIADO: Todos os usuários já são instrutores por padrão
+// Mantido apenas para compatibilidade com frontend antigo
 const becomeInstructor = asyncHandler(async (req, res) => {
   const user = req.user;
 
-  if (user.isInstructor) {
-    return res.status(400).json(createApiResponse(
-      false,
-      'Usuário já é instrutor'
-    ));
+  // Como todos já são instrutores, apenas retornar sucesso
+  if (!user.isInstructor) {
+    user.isInstructor = true;
+    await user.save();
   }
-
-  user.isInstructor = true;
-  await user.save();
 
   res.json(createApiResponse(
     true,
-    'Você agora é um instrutor! Pode começar a criar cursos.',
-    { isInstructor: true }
+    'Você já pode criar cursos! No Swaply, todos podem ensinar e aprender.',
+    { 
+      isInstructor: true,
+      message: 'Ensine o que sabe, aprenda o que quer!'
+    }
   ));
 });
 
@@ -466,6 +468,144 @@ const getCreditsBalance = asyncHandler(async (req, res) => {
   ));
 });
 
+/**
+ * GET /users/calendar
+ * Obter calendário do usuário com suas aulas agendadas
+ */
+const getUserCalendar = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { month, year } = req.query;
+
+  if (!month || !year) {
+    return res.status(400).json(createApiResponse(
+      false,
+      'Mês e ano são obrigatórios'
+    ));
+  }
+
+  try {
+    const calendar = await schedulingService.getUserCalendar(
+      userId,
+      parseInt(month),
+      parseInt(year)
+    );
+
+    res.json(createApiResponse(
+      true,
+      'Calendário obtido com sucesso',
+      calendar
+    ));
+  } catch (error) {
+    return res.status(500).json(createApiResponse(
+      false,
+      error.message
+    ));
+  }
+});
+
+/**
+ * GET /instructors/:id/calendar
+ * Obter calendário público de um instrutor
+ */
+const getInstructorCalendar = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { month, year } = req.query;
+
+  if (!month || !year) {
+    return res.status(400).json(createApiResponse(
+      false,
+      'Mês e ano são obrigatórios'
+    ));
+  }
+
+  try {
+    const calendar = await schedulingService.getInstructorCalendar(
+      id,
+      parseInt(month),
+      parseInt(year)
+    );
+
+    res.json(createApiResponse(
+      true,
+      'Calendário do instrutor obtido com sucesso',
+      calendar
+    ));
+  } catch (error) {
+    const statusCode = error.message.includes('não encontrado') ? 404 : 500;
+    return res.status(statusCode).json(createApiResponse(
+      false,
+      error.message
+    ));
+  }
+});
+
+/**
+ * PUT /users/password
+ * Alterar senha do usuário logado
+ */
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword, confirmNewPassword } = req.body;
+  const userId = req.user._id;
+
+  // Validações básicas
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    return res.status(400).json(createApiResponse(
+      false,
+      'Todos os campos são obrigatórios'
+    ));
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    return res.status(400).json(createApiResponse(
+      false,
+      'A nova senha e a confirmação não coincidem'
+    ));
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json(createApiResponse(
+      false,
+      'A nova senha deve ter pelo menos 6 caracteres'
+    ));
+  }
+
+  if (currentPassword === newPassword) {
+    return res.status(400).json(createApiResponse(
+      false,
+      'A nova senha deve ser diferente da senha atual'
+    ));
+  }
+
+  // Buscar usuário com senha
+  const user = await User.findById(userId).select('+password');
+
+  if (!user) {
+    return res.status(404).json(createApiResponse(
+      false,
+      'Usuário não encontrado'
+    ));
+  }
+
+  // Verificar se a senha atual está correta
+  const isPasswordValid = await user.comparePassword(currentPassword);
+
+  if (!isPasswordValid) {
+    return res.status(401).json(createApiResponse(
+      false,
+      'Senha atual incorreta'
+    ));
+  }
+
+  // Atualizar senha
+  user.password = newPassword;
+  await user.save();
+
+  res.json(createApiResponse(
+    true,
+    'Senha alterada com sucesso'
+  ));
+});
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -483,5 +623,8 @@ module.exports = {
   getTeachingCourses,
   becomeInstructor,
   deleteAccount,
-  getCreditsBalance
+  getCreditsBalance,
+  getUserCalendar,
+  getInstructorCalendar,
+  changePassword
 };

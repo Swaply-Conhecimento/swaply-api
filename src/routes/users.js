@@ -16,8 +16,16 @@ const {
   getTeachingCourses,
   becomeInstructor,
   deleteAccount,
-  getCreditsBalance
+  getCreditsBalance,
+  getUserCalendar,
+  getInstructorCalendar,
+  changePassword
 } = require('../controllers/userController');
+const {
+  getUserReviews,
+  getReceivedReviews,
+  getInstructorReviewStats
+} = require('../controllers/reviewController');
 const { authenticate } = require('../middleware/auth');
 const { uploadAvatar, cleanupTempFiles } = require('../middleware/upload');
 const { 
@@ -27,6 +35,7 @@ const {
   sanitizeInput
 } = require('../middleware/validation');
 const { userValidators, paymentValidators, paramValidators } = require('../utils/validators');
+const { body } = require('express-validator');
 
 const router = express.Router();
 
@@ -40,6 +49,23 @@ router.put('/profile',
   userValidators.updateProfile,
   handleValidationErrors,
   updateProfile
+);
+
+// Rota de alteração de senha
+router.put('/password',
+  sanitizeInput,
+  [
+    body('currentPassword')
+      .notEmpty().withMessage('Senha atual é obrigatória'),
+    body('newPassword')
+      .isLength({ min: 6 }).withMessage('Nova senha deve ter pelo menos 6 caracteres')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('Nova senha deve conter pelo menos uma letra minúscula, uma maiúscula e um número'),
+    body('confirmNewPassword')
+      .notEmpty().withMessage('Confirmação da nova senha é obrigatória')
+  ],
+  handleValidationErrors,
+  changePassword
 );
 
 // Rotas de avatar
@@ -106,5 +132,25 @@ router.post('/become-instructor', becomeInstructor);
 
 // Rota de exclusão de conta
 router.delete('/account', deleteAccount);
+
+// Rotas de calendário
+router.get('/calendar',
+  getUserCalendar
+);
+
+// Rotas de avaliações do usuário
+router.get('/reviews',
+  validatePagination,
+  getUserReviews
+);
+
+router.get('/reviews/received',
+  validatePagination,
+  getReceivedReviews
+);
+
+router.get('/reviews/stats',
+  getInstructorReviewStats
+);
 
 module.exports = router;

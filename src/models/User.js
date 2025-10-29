@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema({
   },
   isInstructor: {
     type: Boolean,
-    default: false
+    default: true  // Todos podem ensinar e aprender
   },
   stats: {
     coursesCompleted: {

@@ -339,6 +339,242 @@ const emailTemplates = {
         </div>
       </div>
     `
+  },
+
+  classScheduled: {
+    subject: 'Aula Agendada com Sucesso - {{courseTitle}}',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">📚 Aula Agendada!</h1>
+          <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Tudo pronto para sua aula</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: white;">
+          <h2 style="color: #333; margin-bottom: 20px;">Olá, {{studentName}}!</h2>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            Sua aula de <strong>{{courseTitle}}</strong> foi agendada com sucesso!
+          </p>
+          
+          <div style="background: #e8f5e9; border: 1px solid #4caf50; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <h3 style="color: #2e7d32; margin: 0 0 15px 0; font-size: 18px;">📅 Detalhes da Aula:</h3>
+            <p style="margin: 8px 0; color: #2e7d32;"><strong>📚 Curso:</strong> {{courseTitle}}</p>
+            <p style="margin: 8px 0; color: #2e7d32;"><strong>👨‍🏫 Instrutor:</strong> {{instructorName}}</p>
+            <p style="margin: 8px 0; color: #2e7d32;"><strong>📅 Data:</strong> {{classDate}}</p>
+            <p style="margin: 8px 0; color: #2e7d32;"><strong>🕐 Horário:</strong> {{classTime}}</p>
+            <p style="margin: 8px 0; color: #2e7d32;"><strong>⏱️ Duração:</strong> {{classDuration}}</p>
+          </div>
+          
+          <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin: 25px 0;">
+            <p style="margin: 0; color: #856404;"><strong>💳 Créditos:</strong> {{creditsSpent}} crédito(s) deduzido(s)</p>
+          </div>
+          
+          <h3 style="color: #333; margin: 30px 0 15px 0;">💡 Dicas para a Aula:</h3>
+          <ul style="color: #666; font-size: 16px; line-height: 1.8; padding-left: 20px;">
+            <li>Entre na sala 5 minutos antes do horário</li>
+            <li>Teste sua câmera e microfone antecipadamente</li>
+            <li>Prepare suas dúvidas e objetivos</li>
+            <li>Tenha um ambiente tranquilo e iluminado</li>
+          </ul>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{calendarUrl}}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+              Ver no Calendário
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; line-height: 1.6; text-align: center; margin-top: 30px;">
+            Você receberá um lembrete 1 hora antes da aula começar.
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px 30px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Swaply. Todos os direitos reservados.
+          </p>
+        </div>
+      </div>
+    `
+  },
+
+  instructorClassNotification: {
+    subject: 'Nova Aula Agendada - {{courseTitle}}',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🎓 Nova Aula!</h1>
+          <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Um aluno agendou uma aula com você</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: white;">
+          <h2 style="color: #333; margin-bottom: 20px;">Olá, {{instructorName}}!</h2>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            <strong>{{studentName}}</strong> agendou uma aula do seu curso <strong>{{courseTitle}}</strong>.
+          </p>
+          
+          <div style="background: #e3f2fd; border: 1px solid #2196f3; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <h3 style="color: #1976d2; margin: 0 0 15px 0; font-size: 18px;">📅 Informações da Aula:</h3>
+            <p style="margin: 8px 0; color: #1976d2;"><strong>👤 Aluno:</strong> {{studentName}}</p>
+            <p style="margin: 8px 0; color: #1976d2;"><strong>📚 Curso:</strong> {{courseTitle}}</p>
+            <p style="margin: 8px 0; color: #1976d2;"><strong>📅 Data:</strong> {{classDate}}</p>
+            <p style="margin: 8px 0; color: #1976d2;"><strong>🕐 Horário:</strong> {{classTime}}</p>
+            <p style="margin: 8px 0; color: #1976d2;"><strong>⏱️ Duração:</strong> {{classDuration}}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{classDetailsUrl}}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+              Ver Detalhes da Aula
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; line-height: 1.6; text-align: center; margin-top: 30px;">
+            Você receberá um lembrete antes da aula começar.
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px 30px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Swaply. Todos os direitos reservados.
+          </p>
+        </div>
+      </div>
+    `
+  },
+
+  classCancelled: {
+    subject: 'Aula Cancelada - {{courseTitle}}',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">❌ Aula Cancelada</h1>
+          <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Informação importante sobre sua aula</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: white;">
+          <h2 style="color: #333; margin-bottom: 20px;">Olá, {{studentName}}!</h2>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            Informamos que a aula de <strong>{{courseTitle}}</strong> agendada para <strong>{{classDate}}</strong> às <strong>{{classTime}}</strong> foi cancelada.
+          </p>
+          
+          <div style="background: #ffebee; border: 1px solid #f44336; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <h3 style="color: #c62828; margin: 0 0 15px 0; font-size: 18px;">📋 Detalhes do Cancelamento:</h3>
+            <p style="margin: 8px 0; color: #c62828;"><strong>Curso:</strong> {{courseTitle}}</p>
+            <p style="margin: 8px 0; color: #c62828;"><strong>Data:</strong> {{classDate}}</p>
+            <p style="margin: 8px 0; color: #c62828;"><strong>Horário:</strong> {{classTime}}</p>
+            {{#if reason}}<p style="margin: 8px 0; color: #c62828;"><strong>Motivo:</strong> {{reason}}</p>{{/if}}
+          </div>
+          
+          {{#if refunded}}
+          <div style="background: #e8f5e9; border: 1px solid #4caf50; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <h3 style="color: #2e7d32; margin: 0 0 10px 0; font-size: 18px;">💰 Reembolso</h3>
+            <p style="margin: 0; color: #2e7d32;"><strong>{{refundAmount}}</strong> crédito(s) foram reembolsados para sua conta.</p>
+          </div>
+          {{else}}
+          <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <p style="margin: 0; color: #856404;">⚠️ Esta aula foi cancelada com menos de 24h de antecedência e não será reembolsada.</p>
+          </div>
+          {{/if}}
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{courseUrl}}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+              Reagendar Aula
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 14px; line-height: 1.6; text-align: center;">
+            Se tiver dúvidas, entre em contato conosco.
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px 30px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Swaply. Todos os direitos reservados.
+          </p>
+        </div>
+      </div>
+    `
+  },
+
+  instructorCancellationNotification: {
+    subject: 'Aula Cancelada - {{courseTitle}}',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">❌ Aula Cancelada</h1>
+          <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Notificação de cancelamento</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: white;">
+          <h2 style="color: #333; margin-bottom: 20px;">Olá, {{instructorName}}!</h2>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            A aula com <strong>{{studentName}}</strong> do curso <strong>{{courseTitle}}</strong> foi cancelada.
+          </p>
+          
+          <div style="background: #ffebee; border: 1px solid #f44336; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <h3 style="color: #c62828; margin: 0 0 15px 0; font-size: 18px;">📋 Informações:</h3>
+            <p style="margin: 8px 0; color: #c62828;"><strong>Aluno:</strong> {{studentName}}</p>
+            <p style="margin: 8px 0; color: #c62828;"><strong>Curso:</strong> {{courseTitle}}</p>
+            <p style="margin: 8px 0; color: #c62828;"><strong>Data:</strong> {{classDate}}</p>
+            <p style="margin: 8px 0; color: #c62828;"><strong>Horário:</strong> {{classTime}}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{calendarUrl}}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+              Ver Calendário
+            </a>
+          </div>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px 30px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Swaply. Todos os direitos reservados.
+          </p>
+        </div>
+      </div>
+    `
+  },
+
+  instructorReminderEmail: {
+    subject: 'Lembrete: Aula em {{minutesUntil}} minutos',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">⏰ Lembrete de Aula!</h1>
+          <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Sua aula começa em breve</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: white;">
+          <h2 style="color: #333; margin-bottom: 20px;">Olá, {{instructorName}}!</h2>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            Sua aula com <strong>{{studentName}}</strong> começa em <strong>{{minutesUntil}} minutos</strong>!
+          </p>
+          
+          <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <h3 style="color: #856404; margin: 0 0 15px 0; font-size: 18px;">📅 Detalhes:</h3>
+            <p style="margin: 8px 0; color: #856404;"><strong>Aluno:</strong> {{studentName}}</p>
+            <p style="margin: 8px 0; color: #856404;"><strong>Curso:</strong> {{courseTitle}}</p>
+            <p style="margin: 8px 0; color: #856404;"><strong>Horário:</strong> {{classTime}}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{classDetailsUrl}}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+              Ver Detalhes
+            </a>
+          </div>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px 30px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Swaply. Todos os direitos reservados.
+          </p>
+        </div>
+      </div>
+    `
   }
 };
 
@@ -524,6 +760,125 @@ const testEmailConfiguration = async () => {
   }
 };
 
+// Função para enviar email de aula agendada (estudante)
+const sendClassScheduledEmail = async ({ to, studentName, courseTitle, instructorName, date, duration }) => {
+  const classDate = new Date(date);
+  
+  return await sendEmail({
+    to,
+    template: 'classScheduled',
+    data: {
+      studentName,
+      courseTitle,
+      instructorName,
+      classDate: classDate.toLocaleDateString('pt-BR'),
+      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      classDuration: `${duration} hora${duration > 1 ? 's' : ''}`,
+      creditsSpent: Math.ceil(duration),
+      calendarUrl: `${process.env.FRONTEND_URL}/dashboard/calendar`
+    }
+  });
+};
+
+// Função para enviar notificação de nova aula para o instrutor
+const sendInstructorClassNotification = async ({ to, instructorName, studentName, courseTitle, date, duration }) => {
+  const classDate = new Date(date);
+  
+  return await sendEmail({
+    to,
+    template: 'instructorClassNotification',
+    data: {
+      instructorName,
+      studentName,
+      courseTitle,
+      classDate: classDate.toLocaleDateString('pt-BR'),
+      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      classDuration: `${duration} hora${duration > 1 ? 's' : ''}`,
+      classDetailsUrl: `${process.env.FRONTEND_URL}/dashboard/classes`
+    }
+  });
+};
+
+// Função para enviar email de aula cancelada (estudante)
+const sendClassCancelledEmail = async ({ to, studentName, courseTitle, date, refunded, refundAmount, reason }) => {
+  const classDate = new Date(date);
+  
+  return await sendEmail({
+    to,
+    template: 'classCancelled',
+    data: {
+      studentName,
+      courseTitle,
+      classDate: classDate.toLocaleDateString('pt-BR'),
+      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      refunded: refunded ? 'true' : '',
+      refundAmount,
+      reason: reason || '',
+      courseUrl: `${process.env.FRONTEND_URL}/courses`
+    }
+  });
+};
+
+// Função para enviar notificação de cancelamento para o instrutor
+const sendInstructorCancellationNotification = async ({ to, instructorName, studentName, courseTitle, date }) => {
+  const classDate = new Date(date);
+  
+  return await sendEmail({
+    to,
+    template: 'instructorCancellationNotification',
+    data: {
+      instructorName,
+      studentName,
+      courseTitle,
+      classDate: classDate.toLocaleDateString('pt-BR'),
+      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      calendarUrl: `${process.env.FRONTEND_URL}/dashboard/calendar`
+    }
+  });
+};
+
+// Função para enviar lembrete de aula para o estudante
+const sendClassReminderEmail = async ({ to, studentName, courseTitle, date, minutesUntil }) => {
+  const classDate = new Date(date);
+  const timeText = minutesUntil <= 60 ? 
+    `${minutesUntil} minutos` : 
+    `${Math.ceil(minutesUntil / 60)} horas`;
+  
+  return await sendEmail({
+    to,
+    template: 'classReminder',
+    data: {
+      studentName,
+      courseTitle,
+      timeUntilClass: timeText,
+      classDate: classDate.toLocaleDateString('pt-BR'),
+      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      classDuration: '1 hora',
+      instructorName: '',
+      zoomLink: '#',
+      classDetailsUrl: `${process.env.FRONTEND_URL}/dashboard/classes`
+    }
+  });
+};
+
+// Função para enviar lembrete de aula para o instrutor
+const sendInstructorReminderEmail = async ({ to, instructorName, studentName, courseTitle, date, minutesUntil }) => {
+  const classDate = new Date(date);
+  
+  return await sendEmail({
+    to,
+    template: 'instructorReminderEmail',
+    data: {
+      instructorName,
+      studentName,
+      courseTitle,
+      minutesUntil: minutesUntil.toString(),
+      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      classDetailsUrl: `${process.env.FRONTEND_URL}/dashboard/classes`
+    }
+  });
+};
+
 module.exports = {
   sendEmail,
   sendWelcomeEmail,
@@ -534,5 +889,11 @@ module.exports = {
   sendCustomEmail,
   validateEmail,
   testEmailConfiguration,
+  sendClassScheduledEmail,
+  sendInstructorClassNotification,
+  sendClassCancelledEmail,
+  sendInstructorCancellationNotification,
+  sendClassReminderEmail,
+  sendInstructorReminderEmail,
   emailTemplates
 };
