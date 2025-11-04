@@ -183,13 +183,7 @@ const courseValidators = {
         `Descrição deve ter entre 20 e ${SYSTEM_LIMITS.MAX_COURSE_DESCRIPTION_LENGTH} caracteres`
       ),
 
-    body("category")
-      .notEmpty()
-      .withMessage("Categoria é obrigatória")
-      .isIn(COURSE_CATEGORIES)
-      .withMessage(
-        `Categoria deve ser uma das opções: ${COURSE_CATEGORIES.join(", ")}`
-      ),
+    body("category").notEmpty().withMessage("Categoria é obrigatória"),
 
     body("level")
       .notEmpty()
@@ -283,10 +277,7 @@ const courseValidators = {
       .isLength({ min: 1, max: 100 })
       .withMessage("Título do módulo deve ter entre 1 e 100 caracteres"),
 
-    body("curriculum.*.duration")
-      .optional()
-      .isFloat({ min: 0.5, max: 10 })
-      .withMessage("Duração do módulo deve ser entre 0.5 e 10 horas"),
+    body("curriculum.*.duration").optional(),
 
     body("schedule")
       .optional()
@@ -326,12 +317,7 @@ const courseValidators = {
         `Descrição deve ter entre 20 e ${SYSTEM_LIMITS.MAX_COURSE_DESCRIPTION_LENGTH} caracteres`
       ),
 
-    body("category")
-      .optional()
-      .isIn(COURSE_CATEGORIES)
-      .withMessage(
-        `Categoria deve ser uma das opções: ${COURSE_CATEGORIES.join(", ")}`
-      ),
+    body("category").optional(),
 
     body("level")
       .optional()
@@ -370,10 +356,7 @@ const courseValidators = {
       .isLength({ min: 1, max: 100 })
       .withMessage("Termo de busca deve ter entre 1 e 100 caracteres"),
 
-    query("category")
-      .optional()
-      .isIn(COURSE_CATEGORIES)
-      .withMessage("Categoria inválida"),
+    query("category").optional(),
 
     query("level")
       .optional()
