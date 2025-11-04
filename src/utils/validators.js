@@ -271,13 +271,28 @@ const courseValidators = {
         `Máximo de ${SYSTEM_LIMITS.MAX_CURRICULUM_ITEMS} itens no currículo`
       ),
 
+    body("curriculum.*.id")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("ID do módulo deve ser um número inteiro positivo"),
+
     body("curriculum.*.title")
       .optional()
       .trim()
+      .notEmpty()
+      .withMessage("Título do módulo é obrigatório")
       .isLength({ min: 1, max: 100 })
       .withMessage("Título do módulo deve ter entre 1 e 100 caracteres"),
 
-    body("curriculum.*.duration").optional(),
+    body("curriculum.*.duration")
+      .optional()
+      .isFloat({ min: 0.5 })
+      .withMessage("Duração do módulo deve ser pelo menos 0.5 horas"),
+
+    body("curriculum.*.lessons")
+      .optional()
+      .isArray()
+      .withMessage("Lessons deve ser um array"),
 
     body("schedule")
       .optional()

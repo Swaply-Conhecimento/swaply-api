@@ -10,11 +10,15 @@ const errorHandler = (err, req, res, next) => {
 
   // Erro de validação do Mongoose
   if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(val => val.message).join(', ');
+    const errors = Object.values(err.errors).map(val => ({
+      field: val.path,
+      message: val.message,
+      value: val.value
+    }));
     return res.status(400).json({
       success: false,
       message: 'Dados inválidos',
-      errors: message
+      errors: errors
     });
   }
 
@@ -87,9 +91,16 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Erro padrão do servidor
+  // Em desenvolvimento, mostrar mais detalhes
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
   res.status(500).json({
     success: false,
-    message: 'Erro interno do servidor'
+    message: 'Erro interno do servidor',
+    ...(isDevelopment && {
+      error: err.message,
+      stack: err.stack
+    })
   });
 };
 

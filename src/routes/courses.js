@@ -28,6 +28,13 @@ const {
 } = require("../controllers/reviewController");
 
 const {
+  authenticate,
+  optionalAuth,
+  requireInstructor,
+  requireCourseOwnership,
+  requireEnrollment,
+} = require("../middleware/auth");
+const {
   uploadCourseImage: uploadMiddleware,
   cleanupTempFiles,
 } = require("../middleware/upload");
@@ -63,8 +70,14 @@ router.get("/featured", getFeaturedCourses);
 
 router.get("/popular", getPopularCourses);
 
-// Rotas públicas
-router.get("/:id", paramValidators.id, handleValidationErrors, getCourseById);
+// Rotas públicas com autenticação opcional
+router.get(
+  "/:id",
+  paramValidators.id,
+  handleValidationErrors,
+  optionalAuth,
+  getCourseById
+);
 
 router.get(
   "/:id/reviews",
@@ -80,6 +93,9 @@ router.get(
   handleValidationErrors,
   getCourseAvailability
 );
+
+// Rotas que requerem autenticação
+router.use(authenticate);
 
 // Rotas de recomendação
 router.get(
@@ -113,23 +129,31 @@ router.post(
   createCourse
 );
 
-// Rotas de edição de curso
+// Rotas de edição de curso (requerem ser dono do curso)
 router.put(
   "/:id",
   paramValidators.id,
   handleValidationErrors,
+  requireCourseOwnership,
   sanitizeInput,
   courseValidators.update,
   handleValidationErrors,
   updateCourse
 );
 
-router.delete("/:id", paramValidators.id, handleValidationErrors, deleteCourse);
+router.delete(
+  "/:id",
+  paramValidators.id,
+  handleValidationErrors,
+  requireCourseOwnership,
+  deleteCourse
+);
 
 router.get(
   "/:id/students",
   paramValidators.id,
   handleValidationErrors,
+  requireCourseOwnership,
   validatePagination,
   getCourseStudents
 );
@@ -138,6 +162,7 @@ router.post(
   "/:id/image",
   paramValidators.id,
   handleValidationErrors,
+  requireCourseOwnership,
   uploadMiddleware,
   cleanupTempFiles,
   uploadCourseImage
