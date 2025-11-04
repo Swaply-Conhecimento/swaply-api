@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const {
   getProfile,
   updateProfile,
@@ -19,32 +19,33 @@ const {
   getCreditsBalance,
   getUserCalendar,
   getInstructorCalendar,
-  changePassword
-} = require('../controllers/userController');
+  changePassword,
+} = require("../controllers/userController");
 const {
   getUserReviews,
   getReceivedReviews,
-  getInstructorReviewStats
-} = require('../controllers/reviewController');
-const { authenticate } = require('../middleware/auth');
-const { uploadAvatar, cleanupTempFiles } = require('../middleware/upload');
-const { 
+  getInstructorReviewStats,
+} = require("../controllers/reviewController");
+const { uploadAvatar, cleanupTempFiles } = require("../middleware/upload");
+const {
   handleValidationErrors,
   validateObjectId,
   validatePagination,
-  sanitizeInput
-} = require('../middleware/validation');
-const { userValidators, paymentValidators, paramValidators } = require('../utils/validators');
-const { body } = require('express-validator');
+  sanitizeInput,
+} = require("../middleware/validation");
+const {
+  userValidators,
+  paymentValidators,
+  paramValidators,
+} = require("../utils/validators");
+const { body } = require("express-validator");
 
 const router = express.Router();
 
-// Aplicar autenticação em todas as rotas
-router.use(authenticate);
-
 // Rotas de perfil
-router.get('/profile', getProfile);
-router.put('/profile', 
+router.get("/profile", getProfile);
+router.put(
+  "/profile",
   sanitizeInput,
   userValidators.updateProfile,
   handleValidationErrors,
@@ -52,33 +53,30 @@ router.put('/profile',
 );
 
 // Rota de alteração de senha
-router.put('/password',
+router.put(
+  "/password",
   sanitizeInput,
   [
-    body('currentPassword')
-      .notEmpty().withMessage('Senha atual é obrigatória'),
-    body('newPassword')
-      .isLength({ min: 6 }).withMessage('Nova senha deve ter pelo menos 6 caracteres')
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-      .withMessage('Nova senha deve conter pelo menos uma letra minúscula, uma maiúscula e um número'),
-    body('confirmNewPassword')
-      .notEmpty().withMessage('Confirmação da nova senha é obrigatória')
+    body("currentPassword").notEmpty().withMessage("Senha atual é obrigatória"),
+    body("newPassword")
+      .isLength({ min: 6 })
+      .withMessage("Nova senha deve ter pelo menos 6 caracteres"),
+    body("confirmNewPassword")
+      .notEmpty()
+      .withMessage("Confirmação da nova senha é obrigatória"),
   ],
   handleValidationErrors,
   changePassword
 );
 
 // Rotas de avatar
-router.post('/avatar',
-  uploadAvatar,
-  cleanupTempFiles,
-  uploadUserAvatar
-);
-router.delete('/avatar', removeAvatar);
+router.post("/avatar", uploadAvatar, cleanupTempFiles, uploadUserAvatar);
+router.delete("/avatar", removeAvatar);
 
 // Rotas de configurações
-router.get('/settings', getSettings);
-router.put('/settings',
+router.get("/settings", getSettings);
+router.put(
+  "/settings",
   sanitizeInput,
   userValidators.updateSettings,
   handleValidationErrors,
@@ -86,12 +84,10 @@ router.put('/settings',
 );
 
 // Rotas de créditos
-router.get('/credits', 
-  validatePagination,
-  getCreditsHistory
-);
-router.get('/credits/balance', getCreditsBalance);
-router.post('/credits/purchase',
+router.get("/credits", validatePagination, getCreditsHistory);
+router.get("/credits/balance", getCreditsBalance);
+router.post(
+  "/credits/purchase",
   sanitizeInput,
   paymentValidators.purchaseCredits,
   handleValidationErrors,
@@ -99,58 +95,41 @@ router.post('/credits/purchase',
 );
 
 // Rotas de estatísticas
-router.get('/stats', getStats);
+router.get("/stats", getStats);
 
 // Rotas de favoritos
-router.get('/favorites',
-  validatePagination,
-  getFavorites
-);
-router.post('/favorites/:courseId',
+router.get("/favorites", validatePagination, getFavorites);
+router.post(
+  "/favorites/:courseId",
   paramValidators.courseId,
   handleValidationErrors,
   addToFavorites
 );
-router.delete('/favorites/:courseId',
+router.delete(
+  "/favorites/:courseId",
   paramValidators.courseId,
   handleValidationErrors,
   removeFromFavorites
 );
 
 // Rotas de cursos
-router.get('/enrolled-courses',
-  validatePagination,
-  getEnrolledCourses
-);
-router.get('/teaching-courses',
-  validatePagination,
-  getTeachingCourses
-);
+router.get("/enrolled-courses", validatePagination, getEnrolledCourses);
+router.get("/teaching-courses", validatePagination, getTeachingCourses);
 
 // Rotas de instrutor
-router.post('/become-instructor', becomeInstructor);
+router.post("/become-instructor", becomeInstructor);
 
 // Rota de exclusão de conta
-router.delete('/account', deleteAccount);
+router.delete("/account", deleteAccount);
 
 // Rotas de calendário
-router.get('/calendar',
-  getUserCalendar
-);
+router.get("/calendar", getUserCalendar);
 
 // Rotas de avaliações do usuário
-router.get('/reviews',
-  validatePagination,
-  getUserReviews
-);
+router.get("/reviews", validatePagination, getUserReviews);
 
-router.get('/reviews/received',
-  validatePagination,
-  getReceivedReviews
-);
+router.get("/reviews/received", validatePagination, getReceivedReviews);
 
-router.get('/reviews/stats',
-  getInstructorReviewStats
-);
+router.get("/reviews/stats", getInstructorReviewStats);
 
 module.exports = router;

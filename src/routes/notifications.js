@@ -1,42 +1,37 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Notification = require('../models/Notification');
-const { authenticate } = require('../middleware/auth');
-
-// Aplicar autenticação em todas as rotas
-router.use(authenticate);
-
+const Notification = require("../models/Notification");
 // GET /api/notifications - Listar notificações do usuário com filtros e paginação
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const userId = req.user._id;
     const {
       page = 1,
       limit = 20,
-      status = 'all', // 'all', 'unread', 'read'
-      type = 'all',   // 'all', 'class', 'course', 'credit', 'system'
-      sort = 'desc'   // 'asc', 'desc'
+      status = "all", // 'all', 'unread', 'read'
+      type = "all", // 'all', 'class', 'course', 'credit', 'system'
+      sort = "desc", // 'asc', 'desc'
     } = req.query;
 
     // Construir filtro
     const filter = { userId };
 
     // Filtro por status
-    if (status === 'unread') {
+    if (status === "unread") {
       filter.isRead = false;
-    } else if (status === 'read') {
+    } else if (status === "read") {
       filter.isRead = true;
     }
 
     // Filtro por tipo
-    if (type !== 'all') {
+    if (type !== "all") {
       const typeMap = {
-        'class': ['class_reminder', 'class_cancelled', 'class_scheduled'],
-        'course': ['new_course', 'course_update'],
-        'credit': ['credit_earned', 'credit_spent'],
-        'system': ['system', 'new_student', 'instructor_message']
+        class: ["class_reminder", "class_cancelled", "class_scheduled"],
+        course: ["new_course", "course_update"],
+        credit: ["credit_earned", "credit_spent"],
+        system: ["system", "new_student", "instructor_message"],
       };
-      
+
       if (typeMap[type]) {
         filter.type = { $in: typeMap[type] };
       }
@@ -44,7 +39,7 @@ router.get('/', async (req, res) => {
 
     // Configurar paginação
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const sortOrder = sort === 'asc' ? 1 : -1;
+    const sortOrder = sort === "asc" ? 1 : -1;
 
     // Buscar notificações
     const notifications = await Notification.find(filter)
@@ -60,7 +55,7 @@ router.get('/', async (req, res) => {
     // Contar não lidas
     const unreadCount = await Notification.countDocuments({
       userId,
-      isRead: false
+      isRead: false,
     });
 
     res.json({
@@ -72,22 +67,21 @@ router.get('/', async (req, res) => {
         total,
         totalPages,
         hasNext: page < totalPages,
-        hasPrev: page > 1
+        hasPrev: page > 1,
       },
-      unreadCount
+      unreadCount,
     });
-
   } catch (error) {
-    console.error('Error fetching notifications:', error);
+    console.error("Error fetching notifications:", error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar notificações'
+      message: "Erro ao buscar notificações",
     });
   }
 });
 
 // GET /api/notifications/recent - Buscar notificações recentes para o dropdown
-router.get('/recent', async (req, res) => {
+router.get("/recent", async (req, res) => {
   try {
     const userId = req.user._id;
     const limit = parseInt(req.query.limit) || 5;
@@ -99,50 +93,48 @@ router.get('/recent', async (req, res) => {
 
     const unreadCount = await Notification.countDocuments({
       userId,
-      isRead: false
+      isRead: false,
     });
 
     res.json({
       success: true,
       data: notifications,
-      unreadCount
+      unreadCount,
     });
-
   } catch (error) {
-    console.error('Error fetching recent notifications:', error);
+    console.error("Error fetching recent notifications:", error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar notificações recentes'
+      message: "Erro ao buscar notificações recentes",
     });
   }
 });
 
 // GET /api/notifications/unread-count - Contar notificações não lidas
-router.get('/unread-count', async (req, res) => {
+router.get("/unread-count", async (req, res) => {
   try {
     const userId = req.user._id;
 
     const unreadCount = await Notification.countDocuments({
       userId,
-      isRead: false
+      isRead: false,
     });
 
     res.json({
       success: true,
-      data: { unreadCount }
+      data: { unreadCount },
     });
-
   } catch (error) {
-    console.error('Error counting unread notifications:', error);
+    console.error("Error counting unread notifications:", error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao contar notificações não lidas'
+      message: "Erro ao contar notificações não lidas",
     });
   }
 });
 
 // PUT /api/notifications/:id/read - Marcar notificação específica como lida
-router.put('/:id/read', async (req, res) => {
+router.put("/:id/read", async (req, res) => {
   try {
     const userId = req.user._id;
     const notificationId = req.params.id;
@@ -156,27 +148,26 @@ router.put('/:id/read', async (req, res) => {
     if (!notification) {
       return res.status(404).json({
         success: false,
-        message: 'Notificação não encontrada'
+        message: "Notificação não encontrada",
       });
     }
 
     res.json({
       success: true,
-      message: 'Notificação marcada como lida',
-      data: notification
+      message: "Notificação marcada como lida",
+      data: notification,
     });
-
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    console.error("Error marking notification as read:", error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao marcar notificação como lida'
+      message: "Erro ao marcar notificação como lida",
     });
   }
 });
 
 // PUT /api/notifications/mark-all-read - Marcar todas as notificações como lidas
-router.put('/mark-all-read', async (req, res) => {
+router.put("/mark-all-read", async (req, res) => {
   try {
     const userId = req.user._id;
 
@@ -189,109 +180,106 @@ router.put('/mark-all-read', async (req, res) => {
       success: true,
       message: `${result.modifiedCount} notificações marcadas como lidas`,
       data: {
-        modifiedCount: result.modifiedCount
-      }
+        modifiedCount: result.modifiedCount,
+      },
     });
-
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
+    console.error("Error marking all notifications as read:", error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao marcar todas as notificações como lidas'
+      message: "Erro ao marcar todas as notificações como lidas",
     });
   }
 });
 
 // DELETE /api/notifications/clear-all - Excluir todas as notificações lidas (deve vir antes da rota /:id)
-router.delete('/clear-all', async (req, res) => {
+router.delete("/clear-all", async (req, res) => {
   try {
     const userId = req.user._id;
 
     const result = await Notification.deleteMany({
       userId,
-      isRead: true
+      isRead: true,
     });
 
     res.json({
       success: true,
       message: `${result.deletedCount} notificações excluídas`,
       data: {
-        deletedCount: result.deletedCount
-      }
+        deletedCount: result.deletedCount,
+      },
     });
-
   } catch (error) {
-    console.error('Error clearing notifications:', error);
+    console.error("Error clearing notifications:", error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao limpar notificações'
+      message: "Erro ao limpar notificações",
     });
   }
 });
 
 // DELETE /api/notifications/:id - Excluir notificação específica
-router.delete('/:id', async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const userId = req.user._id;
     const notificationId = req.params.id;
 
     const notification = await Notification.findOneAndDelete({
       _id: notificationId,
-      userId
+      userId,
     });
 
     if (!notification) {
       return res.status(404).json({
         success: false,
-        message: 'Notificação não encontrada'
+        message: "Notificação não encontrada",
       });
     }
 
     res.json({
       success: true,
-      message: 'Notificação excluída com sucesso'
+      message: "Notificação excluída com sucesso",
     });
-
   } catch (error) {
-    console.error('Error deleting notification:', error);
+    console.error("Error deleting notification:", error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao excluir notificação'
+      message: "Erro ao excluir notificação",
     });
   }
 });
 
 // POST /api/notifications - Criar nova notificação (para sistema interno)
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    const {
-      userId,
-      type,
-      title,
-      message,
-      data = {}
-    } = req.body;
+    const { userId, type, title, message, data = {} } = req.body;
 
     // Validar dados obrigatórios
     if (!userId || !type || !title || !message) {
       return res.status(400).json({
         success: false,
-        message: 'userId, type, title e message são obrigatórios'
+        message: "userId, type, title e message são obrigatórios",
       });
     }
 
     // Validar tipo
     const validTypes = [
-      'class_reminder', 'class_cancelled', 'class_scheduled',
-      'new_course', 'course_update',
-      'credit_earned', 'credit_spent',
-      'new_student', 'instructor_message', 'system'
+      "class_reminder",
+      "class_cancelled",
+      "class_scheduled",
+      "new_course",
+      "course_update",
+      "credit_earned",
+      "credit_spent",
+      "new_student",
+      "instructor_message",
+      "system",
     ];
 
     if (!validTypes.includes(type)) {
       return res.status(400).json({
         success: false,
-        message: 'Tipo de notificação inválido'
+        message: "Tipo de notificação inválido",
       });
     }
 
@@ -300,22 +288,21 @@ router.post('/', async (req, res) => {
       type,
       title,
       message,
-      data
+      data,
     });
 
     await notification.save();
 
     res.status(201).json({
       success: true,
-      message: 'Notificação criada com sucesso',
-      data: notification
+      message: "Notificação criada com sucesso",
+      data: notification,
     });
-
   } catch (error) {
-    console.error('Error creating notification:', error);
+    console.error("Error creating notification:", error);
     res.status(500).json({
       success: false,
-      message: 'Erro ao criar notificação'
+      message: "Erro ao criar notificação",
     });
   }
 });
