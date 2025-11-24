@@ -72,7 +72,6 @@ router.get("/", async (req, res) => {
       unreadCount,
     });
   } catch (error) {
-    console.error("Error fetching notifications:", error);
     res.status(500).json({
       success: false,
       message: "Erro ao buscar notificações",
@@ -102,7 +101,6 @@ router.get("/recent", async (req, res) => {
       unreadCount,
     });
   } catch (error) {
-    console.error("Error fetching recent notifications:", error);
     res.status(500).json({
       success: false,
       message: "Erro ao buscar notificações recentes",
@@ -125,7 +123,6 @@ router.get("/unread-count", async (req, res) => {
       data: { unreadCount },
     });
   } catch (error) {
-    console.error("Error counting unread notifications:", error);
     res.status(500).json({
       success: false,
       message: "Erro ao contar notificações não lidas",
@@ -158,7 +155,6 @@ router.put("/:id/read", async (req, res) => {
       data: notification,
     });
   } catch (error) {
-    console.error("Error marking notification as read:", error);
     res.status(500).json({
       success: false,
       message: "Erro ao marcar notificação como lida",
@@ -184,7 +180,6 @@ router.put("/mark-all-read", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error marking all notifications as read:", error);
     res.status(500).json({
       success: false,
       message: "Erro ao marcar todas as notificações como lidas",
@@ -210,7 +205,6 @@ router.delete("/clear-all", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error clearing notifications:", error);
     res.status(500).json({
       success: false,
       message: "Erro ao limpar notificações",
@@ -241,7 +235,6 @@ router.delete("/:id", async (req, res) => {
       message: "Notificação excluída com sucesso",
     });
   } catch (error) {
-    console.error("Error deleting notification:", error);
     res.status(500).json({
       success: false,
       message: "Erro ao excluir notificação",
@@ -299,7 +292,6 @@ router.post("/", async (req, res) => {
       data: notification,
     });
   } catch (error) {
-    console.error("Error creating notification:", error);
     res.status(500).json({
       success: false,
       message: "Erro ao criar notificação",

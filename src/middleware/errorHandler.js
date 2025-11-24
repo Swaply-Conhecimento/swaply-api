@@ -5,8 +5,7 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log do erro
-  console.error('Error:', err);
+  // Log do erro removido
 
   // Erro de validação do Mongoose
   if (err.name === 'ValidationError') {

@@ -16,7 +16,6 @@ class NotificationService {
       await notification.save();
       return notification;
     } catch (error) {
-      console.error('Error creating notification:', error);
       throw error;
     }
   }

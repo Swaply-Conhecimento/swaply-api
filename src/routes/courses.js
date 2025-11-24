@@ -97,6 +97,15 @@ router.get(
 // Rotas que requerem autenticação
 router.use(authenticate);
 
+const handleOptionalCourseImageUpload = (req, res, next) => {
+  const contentType = req.headers["content-type"] || "";
+  if (!contentType.toLowerCase().includes("multipart/form-data")) {
+    return next();
+  }
+
+  uploadMiddleware(req, res, next);
+};
+
 // Rotas de recomendação
 router.get(
   "/recommended/:userId",
@@ -123,6 +132,8 @@ router.delete(
 // Rotas de criação de curso (qualquer usuário autenticado pode criar)
 router.post(
   "/",
+  handleOptionalCourseImageUpload,
+  cleanupTempFiles,
   sanitizeInput,
   courseValidators.create,
   handleValidationErrors,

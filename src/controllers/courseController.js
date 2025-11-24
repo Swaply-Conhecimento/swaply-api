@@ -282,6 +282,15 @@ const createCourse = asyncHandler(async (req, res) => {
     instructor: req.user._id
   };
 
+  if (req.file) {
+    try {
+      const uploadResult = await uploadImageToCloud(req.file.path, 'swaply/courses');
+      courseData.image = uploadResult.url;
+    } finally {
+      await deleteFile(req.file.path).catch(() => {});
+    }
+  }
+
   const course = new Course(courseData);
   await course.save();
 
@@ -486,7 +495,7 @@ const uploadCourseImage = asyncHandler(async (req, res) => {
         const publicId = course.image.split('/').pop().split('.')[0];
         await deleteImage(`swaply/courses/${publicId}`);
       } catch (deleteError) {
-        console.error('Erro ao deletar imagem anterior:', deleteError);
+        // Erro ao deletar imagem anterior - silencioso
       }
     }
 

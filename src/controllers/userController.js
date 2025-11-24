@@ -73,7 +73,7 @@ const uploadUserAvatar = asyncHandler(async (req, res) => {
         const publicId = user.avatar.split('/').pop().split('.')[0];
         await deleteImage(`swaply/avatars/${publicId}`);
       } catch (deleteError) {
-        console.error('Erro ao deletar avatar anterior:', deleteError);
+        // Erro ao deletar avatar anterior - silencioso
       }
     }
 
@@ -113,7 +113,7 @@ const removeAvatar = asyncHandler(async (req, res) => {
     const publicId = user.avatar.split('/').pop().split('.')[0];
     await deleteImage(`swaply/avatars/${publicId}`);
   } catch (error) {
-    console.error('Erro ao deletar avatar do Cloudinary:', error);
+    // Erro ao deletar avatar do Cloudinary - silencioso
   }
 
   // Remover do usuário
@@ -437,9 +437,7 @@ const deleteAccount = asyncHandler(async (req, res) => {
   // Enviar email de confirmação de exclusão antes de desativar
   try {
     await sendAccountDeletedEmail(user);
-    console.log(`Email de conta deletada enviado para: ${user.email}`);
   } catch (emailError) {
-    console.error('Erro ao enviar email de conta deletada:', emailError.message);
     // Continua com a exclusão mesmo se o email falhar
   }
 

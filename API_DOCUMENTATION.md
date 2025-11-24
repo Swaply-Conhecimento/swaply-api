@@ -1142,6 +1142,11 @@ Criar novo curso.
 }
 ```
 
+**Content-Type:** `application/json` (padrão) ou `multipart/form-data` para incluir o arquivo da imagem no mesmo envio.
+
+**Campos extras para `multipart/form-data`:**
+- `image`: arquivo de imagem do curso (jpg, jpeg, png ou webp, até 10MB). O backend envia automaticamente para o Cloudinary e salva a URL no campo `image` do curso.
+
 **Resposta (201):**
 ```json
 {

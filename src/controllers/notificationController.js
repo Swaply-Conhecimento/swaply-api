@@ -73,7 +73,6 @@ const getNotifications = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching notifications:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao buscar notificações'
@@ -104,7 +103,6 @@ const getRecentNotifications = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching recent notifications:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao buscar notificações recentes'
@@ -128,7 +126,6 @@ const getUnreadCount = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error counting unread notifications:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao contar notificações não lidas'
@@ -162,7 +159,6 @@ const markAsRead = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error marking notification as read:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao marcar notificação como lida'
@@ -189,7 +185,6 @@ const markAllAsRead = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao marcar todas as notificações como lidas'
@@ -221,7 +216,6 @@ const deleteNotification = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error deleting notification:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao excluir notificação'
@@ -248,7 +242,6 @@ const clearAllRead = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error clearing notifications:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao limpar notificações'
@@ -307,7 +300,6 @@ const createNotification = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating notification:', error);
     res.status(500).json({
       success: false,
       message: 'Erro ao criar notificação'

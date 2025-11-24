@@ -133,7 +133,7 @@ const cleanupTempFiles = (req, res, next) => {
         try {
           fs.unlinkSync(file.path);
         } catch (error) {
-          console.error('Erro ao deletar arquivo temporário:', error);
+          // Erro ao deletar arquivo temporário - silencioso
         }
       }
     });
@@ -198,7 +198,6 @@ const validateImageDimensions = (minWidth = 0, minHeight = 0, maxWidth = Infinit
       req.imageMetadata = metadata;
       next();
     } catch (error) {
-      console.error('Erro ao validar dimensões da imagem:', error);
       return res.status(400).json({
         success: false,
         message: 'Erro ao processar imagem'

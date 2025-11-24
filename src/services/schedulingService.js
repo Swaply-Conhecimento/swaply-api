@@ -414,7 +414,7 @@ class SchedulingService {
         duration: scheduledClass.duration
       });
     } catch (error) {
-      console.error('Erro ao enviar notificações de agendamento:', error);
+      // Erro ao enviar notificações de agendamento - silencioso
     }
   }
 
@@ -471,7 +471,7 @@ class SchedulingService {
         date: scheduledClass.date
       });
     } catch (error) {
-      console.error('Erro ao enviar notificações de cancelamento:', error);
+      // Erro ao enviar notificações de cancelamento - silencioso
     }
   }
 
@@ -534,7 +534,6 @@ class SchedulingService {
 
       return upcomingClasses.length;
     } catch (error) {
-      console.error('Erro ao enviar lembretes de aulas:', error);
       throw error;
     }
   }

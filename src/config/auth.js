@@ -61,8 +61,6 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       return done(error, null);
     }
   }));
-} else {
-  console.log('⚠️  Google OAuth não configurado - rotas do Google desabilitadas');
 }
 
 passport.serializeUser((user, done) => {

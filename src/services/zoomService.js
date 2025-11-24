@@ -97,8 +97,6 @@ class ZoomService {
       };
 
     } catch (error) {
-      console.error('Erro ao criar meeting no Zoom:', error.response?.data || error.message);
-      
       throw new Error(
         error.response?.data?.message || 
         'Erro ao criar reunião no Zoom'
@@ -120,8 +118,6 @@ class ZoomService {
       };
 
     } catch (error) {
-      console.error('Erro ao obter meeting do Zoom:', error.response?.data || error.message);
-      
       throw new Error(
         error.response?.data?.message || 
         'Erro ao obter reunião do Zoom'
@@ -144,8 +140,6 @@ class ZoomService {
       };
 
     } catch (error) {
-      console.error('Erro ao atualizar meeting no Zoom:', error.response?.data || error.message);
-      
       throw new Error(
         error.response?.data?.message || 
         'Erro ao atualizar reunião no Zoom'
@@ -167,8 +161,6 @@ class ZoomService {
       };
 
     } catch (error) {
-      console.error('Erro ao deletar meeting no Zoom:', error.response?.data || error.message);
-      
       throw new Error(
         error.response?.data?.message || 
         'Erro ao deletar reunião no Zoom'
@@ -197,8 +189,6 @@ class ZoomService {
       };
 
     } catch (error) {
-      console.error('Erro ao listar meetings do Zoom:', error.response?.data || error.message);
-      
       throw new Error(
         error.response?.data?.message || 
         'Erro ao listar reuniões do Zoom'
@@ -220,8 +210,6 @@ class ZoomService {
       };
 
     } catch (error) {
-      console.error('Erro ao obter gravações do Zoom:', error.response?.data || error.message);
-      
       // Se não há gravações, retornar array vazio
       if (error.response?.status === 404) {
         return {
@@ -284,7 +272,6 @@ class ZoomService {
       };
 
     } catch (error) {
-      console.error('Erro ao criar meeting para aula:', error);
       throw error;
     }
   }
@@ -348,7 +335,6 @@ class ZoomService {
       };
 
     } catch (error) {
-      console.error('Erro ao criar meeting recorrente:', error);
       throw error;
     }
   }
@@ -368,8 +354,6 @@ class ZoomService {
       };
 
     } catch (error) {
-      console.error('Erro ao verificar status da API Zoom:', error.response?.data || error.message);
-      
       return {
         success: false,
         status: 'error',

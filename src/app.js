@@ -90,10 +90,8 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Inicializar Passport
 app.use(passport.initialize());
 
-// Middleware para logging de requests
+// Middleware para logging de requests removido
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.path} - IP: ${req.ip}`);
   next();
 });
 
@@ -144,24 +142,20 @@ app.use(errorHandler);
 
 // Tratamento de erros não capturados
 process.on("unhandledRejection", (err, promise) => {
-  console.log("Unhandled Rejection:", err.message);
   // Fechar servidor e sair do processo
   process.exit(1);
 });
 
 process.on("uncaughtException", (err) => {
-  console.log("Uncaught Exception:", err.message);
   process.exit(1);
 });
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
-  console.log("SIGTERM recebido. Fechando servidor graciosamente...");
   process.exit(0);
 });
 
 process.on("SIGINT", () => {
-  console.log("SIGINT recebido. Fechando servidor graciosamente...");
   process.exit(0);
 });
 

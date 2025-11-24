@@ -49,9 +49,7 @@ const register = async (req, res) => {
     // Enviar email de boas-vindas
     try {
       await sendAccountCreatedEmail(user);
-      console.log(`Email de boas-vindas enviado para: ${user.email}`);
     } catch (emailError) {
-      console.error('Erro ao enviar email de boas-vindas:', emailError.message);
       // Não falha o registro se o email não funcionar
     }
 
@@ -72,7 +70,6 @@ const register = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro no registro:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
@@ -138,7 +135,6 @@ const login = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro no login:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
@@ -160,7 +156,6 @@ const googleCallback = async (req, res) => {
     // Redirecionar para frontend com tokens
     res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}&refresh=${refreshToken}`);
   } catch (error) {
-    console.error('Erro no callback do Google:', error);
     res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
   }
 };
@@ -212,14 +207,12 @@ const forgotPassword = async (req, res) => {
       user.resetPasswordExpires = undefined;
       await user.save();
 
-      console.error('Erro ao enviar email:', emailError);
       res.status(500).json({
         success: false,
         message: 'Erro ao enviar e-mail de reset'
       });
     }
   } catch (error) {
-    console.error('Erro no forgot password:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
@@ -268,7 +261,6 @@ const resetPassword = async (req, res) => {
       message: 'Senha resetada com sucesso'
     });
   } catch (error) {
-    console.error('Erro no reset password:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
@@ -313,7 +305,6 @@ const refreshToken = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao renovar token:', error);
     res.status(401).json({
       success: false,
       message: 'Refresh token inválido'
@@ -335,7 +326,6 @@ const verifyToken = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao verificar token:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
@@ -353,7 +343,6 @@ const logout = async (req, res) => {
       message: 'Logout realizado com sucesso'
     });
   } catch (error) {
-    console.error('Erro no logout:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'

@@ -625,11 +625,7 @@ const sendEmail = async ({ to, subject, template, data = {}, attachments = [] })
     
     const result = await transporter.sendMail(mailOptions);
     
-    console.log('Email enviado com sucesso:', {
-      to,
-      subject: emailSubject,
-      messageId: result.messageId
-    });
+    // Email enviado com sucesso
     
     return {
       success: true,
@@ -639,8 +635,6 @@ const sendEmail = async ({ to, subject, template, data = {}, attachments = [] })
     };
     
   } catch (error) {
-    console.error('Erro ao enviar email:', error);
-    
     throw new Error(`Falha ao enviar email: ${error.message}`);
   }
 };
@@ -752,10 +746,8 @@ const testEmailConfiguration = async () => {
     const transporter = createTransporter();
     await transporter.verify();
     
-    console.log('Configuração de email válida');
     return true;
   } catch (error) {
-    console.error('Erro na configuração de email:', error);
     return false;
   }
 };

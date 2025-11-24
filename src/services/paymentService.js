@@ -30,7 +30,6 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Erro ao criar Payment Intent:', error);
       throw new Error(`Erro no pagamento: ${error.message}`);
     }
   }
@@ -47,7 +46,6 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Erro ao confirmar pagamento:', error);
       throw new Error(`Erro ao confirmar pagamento: ${error.message}`);
     }
   }
@@ -107,7 +105,6 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Erro ao processar compra de créditos:', error);
       throw error;
     }
   }
@@ -145,7 +142,6 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Erro ao processar gasto de créditos:', error);
       throw error;
     }
   }
@@ -179,7 +175,6 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Erro ao processar ganho de créditos:', error);
       throw error;
     }
   }
@@ -225,7 +220,6 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Erro ao processar reembolso:', error);
       throw error;
     }
   }
@@ -247,13 +241,12 @@ class PaymentService {
           break;
         
         default:
-          console.log(`Evento não tratado: ${event.type}`);
+          // Evento não tratado
       }
 
       return { success: true };
 
     } catch (error) {
-      console.error('Erro ao processar webhook do Stripe:', error);
       throw error;
     }
   }
@@ -266,12 +259,10 @@ class PaymentService {
       });
 
       if (!payment) {
-        console.error('Pagamento não encontrado:', paymentIntent.id);
         return;
       }
 
       if (payment.status === PAYMENT_STATUS.COMPLETED) {
-        console.log('Pagamento já processado:', payment._id);
         return;
       }
 
@@ -286,10 +277,8 @@ class PaymentService {
         payment.description
       );
 
-      console.log('Pagamento processado com sucesso:', payment._id);
-
     } catch (error) {
-      console.error('Erro ao processar pagamento bem-sucedido:', error);
+      // Erro ao processar pagamento bem-sucedido - silencioso
     }
   }
 
@@ -301,29 +290,24 @@ class PaymentService {
       });
 
       if (!payment) {
-        console.error('Pagamento não encontrado:', paymentIntent.id);
         return;
       }
 
       await payment.fail('Pagamento recusado pelo banco');
 
-      console.log('Pagamento falhado:', payment._id);
-
     } catch (error) {
-      console.error('Erro ao processar pagamento falhado:', error);
+      // Erro ao processar pagamento falhado - silencioso
     }
   }
 
   // Processar disputa de cobrança
   async handleChargeDispute(dispute) {
     try {
-      console.log('Disputa criada:', dispute.id);
-      
       // Aqui você pode implementar lógica para lidar com disputas
       // Como notificar administradores, suspender serviços, etc.
 
     } catch (error) {
-      console.error('Erro ao processar disputa:', error);
+      // Erro ao processar disputa - silencioso
     }
   }
 
@@ -372,7 +356,6 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Erro ao obter histórico de pagamentos:', error);
       throw error;
     }
   }
@@ -396,7 +379,6 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Erro ao obter resumo financeiro:', error);
       throw error;
     }
   }
@@ -413,7 +395,6 @@ class PaymentService {
       return event;
 
     } catch (error) {
-      console.error('Erro na validação do webhook:', error);
       throw new Error('Webhook inválido');
     }
   }
