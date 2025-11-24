@@ -65,7 +65,7 @@ const courseSchema = new mongoose.Schema({
     required: [true, 'Nível é obrigatório'],
     enum: ['Iniciante', 'Intermediário', 'Avançado']
   },
-  language: {
+  courseLanguage: {
     type: String,
     default: 'Português'
   },
@@ -153,7 +153,10 @@ const courseSchema = new mongoose.Schema({
 });
 
 // Índices
-courseSchema.index({ title: 'text', description: 'text', tags: 'text' });
+courseSchema.index({ title: 'text', description: 'text', tags: 'text' }, {
+  default_language: 'portuguese',
+  language_override: 'none' // Impede que o campo 'language' do documento seja usado
+});
 courseSchema.index({ instructor: 1 });
 courseSchema.index({ category: 1 });
 courseSchema.index({ level: 1 });

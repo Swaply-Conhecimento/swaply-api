@@ -316,6 +316,13 @@ const refreshToken = async (req, res) => {
 const verifyToken = async (req, res) => {
   try {
     // Se chegou até aqui, o token é válido (middleware de auth)
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuário não autenticado'
+      });
+    }
+
     const userResponse = req.user.getPublicProfile();
 
     res.json({
@@ -326,6 +333,11 @@ const verifyToken = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Erro ao verificar token:', {
+      userId: req.user?._id,
+      error: error.message,
+      stack: error.stack
+    });
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'

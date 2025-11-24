@@ -11,6 +11,7 @@ const {
   verifyToken,
   logout,
 } = require("../controllers/authController");
+const { authenticate } = require("../middleware/auth");
 const router = express.Router();
 
 // Validações
@@ -95,8 +96,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   });
 }
 
-// Rotas públicas
-router.get("/verify-token", verifyToken);
-router.post("/logout", logout);
+// Rotas protegidas
+router.get("/verify-token", authenticate, verifyToken);
+router.post("/logout", authenticate, logout);
 
 module.exports = router;

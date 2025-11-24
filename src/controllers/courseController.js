@@ -8,6 +8,14 @@ const { createApiResponse } = require('../utils/helpers');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { COURSE_CATEGORIES, COURSE_SUBCATEGORIES } = require('../utils/constants');
 
+// Helper para mapear courseLanguage para language (compatibilidade com frontend)
+const mapCourseLanguage = (course) => {
+  if (course && course.courseLanguage) {
+    course.language = course.courseLanguage;
+  }
+  return course;
+};
+
 // Listar todos os cursos com filtros
 const getAllCourses = asyncHandler(async (req, res) => {
   const {
@@ -58,11 +66,14 @@ const getAllCourses = asyncHandler(async (req, res) => {
     .lean();
 
   // Adicionar informações calculadas
-  const coursesWithInfo = courses.map(course => ({
-    ...course,
-    totalPrice: course.pricePerHour * course.totalHours,
-    spotsAvailable: course.maxStudents - course.currentStudents
-  }));
+  const coursesWithInfo = courses.map(course => {
+    const courseInfo = {
+      ...course,
+      totalPrice: course.pricePerHour * course.totalHours,
+      spotsAvailable: course.maxStudents - course.currentStudents
+    };
+    return mapCourseLanguage(courseInfo);
+  });
 
   res.json(createApiResponse(
     true,
@@ -247,7 +258,7 @@ const getCourseById = asyncHandler(async (req, res) => {
   }
 
   // Adicionar informações calculadas
-  const courseWithInfo = {
+  const courseWithInfo = mapCourseLanguage({
     ...course,
     totalPrice: course.pricePerHour * course.totalHours,
     spotsAvailable: course.maxStudents - course.currentStudents,
@@ -255,7 +266,7 @@ const getCourseById = asyncHandler(async (req, res) => {
       student => student._id.toString() === req.user._id.toString()
     ) : false,
     isFavorite: req.user ? req.user.favorites.includes(course._id) : false
-  };
+  });
 
   res.json(createApiResponse(
     true,
@@ -268,6 +279,10 @@ const getCourseById = asyncHandler(async (req, res) => {
 const createCourse = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.error('Erro na validação ao criar curso:', {
+      userId: req.user._id,
+      errors: errors.array()
+    });
     return res.status(400).json(createApiResponse(
       false,
       'Dados inválidos',
@@ -277,37 +292,82 @@ const createCourse = asyncHandler(async (req, res) => {
     ));
   }
 
-  const courseData = {
-    ...req.body,
-    instructor: req.user._id
-  };
-
-  if (req.file) {
-    try {
-      const uploadResult = await uploadImageToCloud(req.file.path, 'swaply/courses');
-      courseData.image = uploadResult.url;
-    } finally {
-      await deleteFile(req.file.path).catch(() => {});
+  try {
+    // Mapear 'language' para 'courseLanguage' para evitar conflito com MongoDB
+    const { language, ...restBody } = req.body;
+    const courseData = {
+      ...restBody,
+      instructor: req.user._id
+    };
+    
+    // Se language foi enviado, mapear para courseLanguage
+    if (language !== undefined) {
+      courseData.courseLanguage = language;
     }
+
+    // Upload de imagem se fornecida
+    if (req.file) {
+      try {
+        const uploadResult = await uploadImageToCloud(req.file.path, 'swaply/courses');
+        courseData.image = uploadResult.url;
+      } catch (uploadError) {
+        console.error('Erro ao fazer upload da imagem do curso:', {
+          userId: req.user._id,
+          courseTitle: req.body.title,
+          error: uploadError.message
+        });
+        throw new Error('Erro ao fazer upload da imagem do curso');
+      } finally {
+        await deleteFile(req.file.path).catch(() => {});
+      }
+    }
+
+    // Criar e salvar curso
+    const course = new Course(courseData);
+    try {
+      await course.save();
+    } catch (saveError) {
+      console.error('Erro ao salvar curso no banco de dados:', {
+        userId: req.user._id,
+        courseTitle: req.body.title,
+        error: saveError.message
+      });
+      throw saveError;
+    }
+
+    // Atualizar estatísticas do usuário
+    try {
+      await User.findByIdAndUpdate(req.user._id, {
+        $inc: { 'stats.coursesTeaching': 1 },
+        $set: { isInstructor: true }
+      });
+    } catch (statsError) {
+      console.error('Erro ao atualizar estatísticas do usuário após criar curso:', {
+        userId: req.user._id,
+        courseId: course._id,
+        error: statsError.message
+      });
+      // Não falha a criação do curso se a atualização de stats falhar
+    }
+
+    const populatedCourse = await Course.findById(course._id)
+      .populate('instructor', 'name avatar')
+      .lean();
+
+    res.status(201).json(createApiResponse(
+      true,
+      'Curso criado com sucesso',
+      mapCourseLanguage(populatedCourse)
+    ));
+  } catch (error) {
+    console.error('Erro ao criar curso:', {
+      userId: req.user._id,
+      courseTitle: req.body.title,
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
   }
-
-  const course = new Course(courseData);
-  await course.save();
-
-  // Atualizar estatísticas do usuário
-  await User.findByIdAndUpdate(req.user._id, {
-    $inc: { 'stats.coursesTeaching': 1 },
-    $set: { isInstructor: true } // Garantir que está marcado (redundante mas seguro)
-  });
-
-  const populatedCourse = await Course.findById(course._id)
-    .populate('instructor', 'name avatar');
-
-  res.status(201).json(createApiResponse(
-    true,
-    'Curso criado com sucesso',
-    populatedCourse
-  ));
 });
 
 // Atualizar curso
@@ -329,7 +389,7 @@ const updateCourse = asyncHandler(async (req, res) => {
   // Atualizar campos permitidos
   const allowedFields = [
     'title', 'description', 'category', 'subcategory', 'level',
-    'language', 'pricePerHour', 'totalHours', 'maxStudents',
+    'pricePerHour', 'totalHours', 'maxStudents',
     'features', 'curriculum', 'schedule', 'requirements',
     'objectives', 'tags', 'status'
   ];
@@ -339,16 +399,22 @@ const updateCourse = asyncHandler(async (req, res) => {
       course[field] = req.body[field];
     }
   });
+  
+  // Mapear 'language' para 'courseLanguage'
+  if (req.body.language !== undefined) {
+    course.courseLanguage = req.body.language;
+  }
 
   await course.save();
 
   const populatedCourse = await Course.findById(course._id)
-    .populate('instructor', 'name avatar');
+    .populate('instructor', 'name avatar')
+    .lean();
 
   res.json(createApiResponse(
     true,
     'Curso atualizado com sucesso',
-    populatedCourse
+    mapCourseLanguage(populatedCourse)
   ));
 });
 

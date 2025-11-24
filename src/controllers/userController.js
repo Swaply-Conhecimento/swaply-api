@@ -12,13 +12,30 @@ const { asyncHandler } = require('../middleware/errorHandler');
 
 // Obter perfil do usuário
 const getProfile = asyncHandler(async (req, res) => {
-  const user = req.user.getPublicProfile();
-  
-  res.json(createApiResponse(
-    true,
-    'Perfil obtido com sucesso',
-    user
-  ));
+  if (!req.user) {
+    return res.status(401).json(createApiResponse(
+      false,
+      'Usuário não autenticado',
+      null
+    ));
+  }
+
+  try {
+    const user = req.user.getPublicProfile();
+    
+    res.json(createApiResponse(
+      true,
+      'Perfil obtido com sucesso',
+      user
+    ));
+  } catch (error) {
+    console.error('Erro ao obter perfil do usuário:', {
+      userId: req.user?._id,
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
 });
 
 // Atualizar perfil do usuário
@@ -215,36 +232,101 @@ const purchaseCredits = asyncHandler(async (req, res) => {
 
 // Obter estatísticas do usuário
 const getStats = asyncHandler(async (req, res) => {
-  const user = req.user;
-  
-  // Obter cursos matriculados
-  const enrolledCourses = await Course.find({
-    enrolledStudents: user._id,
-    status: 'active'
-  }).countDocuments();
+  if (!req.user) {
+    return res.status(401).json(createApiResponse(
+      false,
+      'Usuário não autenticado',
+      null
+    ));
+  }
 
-  // Obter cursos ensinando
-  const teachingCourses = await Course.find({
-    instructor: user._id,
-    status: 'active'
-  }).countDocuments();
+  try {
+    const user = req.user;
+    
+    // Obter cursos matriculados
+    let enrolledCourses = 0;
+    try {
+      enrolledCourses = await Course.find({
+        enrolledStudents: user._id,
+        status: 'active'
+      }).countDocuments();
+    } catch (error) {
+      console.error('Erro ao contar cursos matriculados:', {
+        userId: user._id,
+        error: error.message
+      });
+    }
 
-  // Obter resumo financeiro
-  const financialSummary = await paymentService.getFinancialSummary(user._id);
+    // Obter cursos ensinando
+    let teachingCourses = 0;
+    try {
+      teachingCourses = await Course.find({
+        instructor: user._id,
+        status: 'active'
+      }).countDocuments();
+    } catch (error) {
+      console.error('Erro ao contar cursos ensinando:', {
+        userId: user._id,
+        error: error.message
+      });
+    }
 
-  const stats = {
-    ...user.stats.toObject(),
-    enrolledCourses,
-    teachingCourses,
-    currentCredits: user.credits,
-    financialSummary: financialSummary.data
-  };
+    // Obter resumo financeiro
+    let financialSummary = {
+      currentCredits: user.credits || 0,
+      summary: {
+        credit_purchase: { totalAmount: 0, totalCredits: 0, count: 0 },
+        credit_earned: { totalAmount: 0, totalCredits: 0, count: 0 },
+        credit_spent: { totalAmount: 0, totalCredits: 0, count: 0 },
+        refund: { totalAmount: 0, totalCredits: 0, count: 0 }
+      },
+      totalSpent: 0,
+      totalEarned: 0,
+      totalUsed: 0
+    };
+    
+    try {
+      const summaryResult = await paymentService.getFinancialSummary(user._id);
+      if (summaryResult && summaryResult.success) {
+        financialSummary = summaryResult.data;
+      }
+    } catch (error) {
+      console.error('Erro ao obter resumo financeiro:', {
+        userId: user._id,
+        error: error.message
+      });
+      // Continua com valores padrão
+    }
 
-  res.json(createApiResponse(
-    true,
-    'Estatísticas obtidas com sucesso',
-    stats
-  ));
+    // Garantir que stats existe
+    const userStats = user.stats ? user.stats.toObject() : {
+      coursesCompleted: 0,
+      coursesTeaching: 0,
+      totalHours: 0,
+      totalEarnings: 0
+    };
+
+    const stats = {
+      ...userStats,
+      enrolledCourses,
+      teachingCourses,
+      currentCredits: user.credits || 0,
+      financialSummary
+    };
+
+    res.json(createApiResponse(
+      true,
+      'Estatísticas obtidas com sucesso',
+      stats
+    ));
+  } catch (error) {
+    console.error('Erro ao obter estatísticas do usuário:', {
+      userId: req.user?._id,
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
 });
 
 // Obter cursos favoritos

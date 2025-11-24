@@ -38,9 +38,13 @@ const {
   paymentValidators,
   paramValidators,
 } = require("../utils/validators");
+const { authenticate } = require("../middleware/auth");
 const { body } = require("express-validator");
 
 const router = express.Router();
+
+// Todas as rotas de usuários requerem autenticação
+router.use(authenticate);
 
 // Rotas de perfil
 router.get("/profile", getProfile);
