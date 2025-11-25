@@ -187,12 +187,18 @@ const getAllCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  // Preparar set de favoritos do usuário, se houver
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   // Adicionar informações calculadas
   const coursesWithInfo = courses.map(course => {
     const courseInfo = {
       ...course,
       totalPrice: course.pricePerHour * course.totalHours,
-      spotsAvailable: course.maxStudents - course.currentStudents
+      spotsAvailable: course.maxStudents - course.currentStudents,
+      isFavorite: favoriteSet.has(course._id.toString())
     };
     return mapCourseLanguage(courseInfo);
   });
@@ -235,10 +241,15 @@ const searchCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   const coursesWithInfo = courses.map(course => ({
     ...course,
     totalPrice: course.pricePerHour * course.totalHours,
-    spotsAvailable: course.maxStudents - course.currentStudents
+    spotsAvailable: course.maxStudents - course.currentStudents,
+    isFavorite: favoriteSet.has(course._id.toString())
   }));
 
   res.json(createApiResponse(
@@ -283,10 +294,15 @@ const getFeaturedCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   const coursesWithInfo = courses.map(course => ({
     ...course,
     totalPrice: course.pricePerHour * course.totalHours,
-    spotsAvailable: course.maxStudents - course.currentStudents
+    spotsAvailable: course.maxStudents - course.currentStudents,
+    isFavorite: favoriteSet.has(course._id.toString())
   }));
 
   res.json(createApiResponse(
@@ -306,10 +322,15 @@ const getPopularCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   const coursesWithInfo = courses.map(course => ({
     ...course,
     totalPrice: course.pricePerHour * course.totalHours,
-    spotsAvailable: course.maxStudents - course.currentStudents
+    spotsAvailable: course.maxStudents - course.currentStudents,
+    isFavorite: favoriteSet.has(course._id.toString())
   }));
 
   res.json(createApiResponse(
@@ -350,10 +371,16 @@ const getRecommendedCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  // If requester is authenticated, build favorite set
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   const coursesWithInfo = courses.map(course => ({
     ...course,
     totalPrice: course.pricePerHour * course.totalHours,
-    spotsAvailable: course.maxStudents - course.currentStudents
+    spotsAvailable: course.maxStudents - course.currentStudents,
+    isFavorite: favoriteSet.has(course._id.toString())
   }));
 
   res.json(createApiResponse(
