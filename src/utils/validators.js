@@ -220,6 +220,15 @@ const courseValidators = {
         `Total de horas deve ser entre ${SYSTEM_LIMITS.MIN_COURSE_HOURS} e ${SYSTEM_LIMITS.MAX_COURSE_HOURS} horas`
       ),
 
+    // Validação de pricing
+    body("pricing.singleClass")
+      .isInt({ min: 1 })
+      .withMessage("Preço da aula avulsa deve ser no mínimo 1 crédito"),
+
+    body("pricing.fullCourse")
+      .isInt({ min: 1 })
+      .withMessage("Preço do curso completo deve ser no mínimo 1 crédito"),
+
     body("maxStudents")
       .optional()
       .isInt({ min: 1, max: 1000 })

@@ -370,6 +370,21 @@ const emailTemplates = {
             <p style="margin: 0; color: #856404;"><strong>💳 Créditos:</strong> {{creditsSpent}} crédito(s) deduzido(s)</p>
           </div>
           
+          <div style="background: #f0f4ff; border: 2px solid #667eea; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <h3 style="color: #667eea; margin: 0 0 15px 0; font-size: 18px;">🎥 Link da Aula Online:</h3>
+            <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">
+              Acesse a sala virtual no horário agendado:
+            </p>
+            <div style="text-align: center;">
+              <a href="{{jitsiUrl}}" style="background: #667eea; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 15px; font-weight: bold; display: inline-block;">
+                🎥 Entrar na Sala Virtual
+              </a>
+            </div>
+            <p style="margin: 15px 0 0 0; color: #999; font-size: 12px; text-align: center;">
+              O link estará disponível 15 minutos antes da aula
+            </p>
+          </div>
+          
           <h3 style="color: #333; margin: 30px 0 15px 0;">💡 Dicas para a Aula:</h3>
           <ul style="color: #666; font-size: 16px; line-height: 1.8; padding-left: 20px;">
             <li>Entre na sala 5 minutos antes do horário</li>
@@ -421,6 +436,18 @@ const emailTemplates = {
             <p style="margin: 8px 0; color: #1976d2;"><strong>📅 Data:</strong> {{classDate}}</p>
             <p style="margin: 8px 0; color: #1976d2;"><strong>🕐 Horário:</strong> {{classTime}}</p>
             <p style="margin: 8px 0; color: #1976d2;"><strong>⏱️ Duração:</strong> {{classDuration}}</p>
+          </div>
+          
+          <div style="background: #f0f4ff; border: 2px solid #667eea; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <h3 style="color: #667eea; margin: 0 0 15px 0; font-size: 18px;">🎥 Link da Sala Virtual:</h3>
+            <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">
+              Acesse a sala no horário agendado (você é o moderador):
+            </p>
+            <div style="text-align: center;">
+              <a href="{{jitsiUrl}}" style="background: #667eea; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 15px; font-weight: bold; display: inline-block;">
+                🎥 Entrar como Instrutor
+              </a>
+            </div>
           </div>
           
           <div style="text-align: center; margin: 30px 0;">
@@ -753,8 +780,8 @@ const testEmailConfiguration = async () => {
 };
 
 // Função para enviar email de aula agendada (estudante)
-const sendClassScheduledEmail = async ({ to, studentName, courseTitle, instructorName, date, duration }) => {
-  const classDate = new Date(date);
+const sendClassScheduledEmail = async (to, data) => {
+  const { studentName, courseTitle, instructorName, classDate, classTime, duration, creditsSpent, jitsiUrl } = data;
   
   return await sendEmail({
     to,
@@ -763,18 +790,19 @@ const sendClassScheduledEmail = async ({ to, studentName, courseTitle, instructo
       studentName,
       courseTitle,
       instructorName,
-      classDate: classDate.toLocaleDateString('pt-BR'),
-      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      classDate,
+      classTime,
       classDuration: `${duration} hora${duration > 1 ? 's' : ''}`,
-      creditsSpent: Math.ceil(duration),
+      creditsSpent,
+      jitsiUrl: jitsiUrl || '#',
       calendarUrl: `${process.env.FRONTEND_URL}/dashboard/calendar`
     }
   });
 };
 
 // Função para enviar notificação de nova aula para o instrutor
-const sendInstructorClassNotification = async ({ to, instructorName, studentName, courseTitle, date, duration }) => {
-  const classDate = new Date(date);
+const sendNewClassNotificationEmail = async (to, data) => {
+  const { instructorName, studentName, courseTitle, classDate, classTime, duration, jitsiUrl } = data;
   
   return await sendEmail({
     to,
@@ -783,17 +811,18 @@ const sendInstructorClassNotification = async ({ to, instructorName, studentName
       instructorName,
       studentName,
       courseTitle,
-      classDate: classDate.toLocaleDateString('pt-BR'),
-      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      classDate,
+      classTime,
       classDuration: `${duration} hora${duration > 1 ? 's' : ''}`,
+      jitsiUrl: jitsiUrl || '#',
       classDetailsUrl: `${process.env.FRONTEND_URL}/dashboard/classes`
     }
   });
 };
 
 // Função para enviar email de aula cancelada (estudante)
-const sendClassCancelledEmail = async ({ to, studentName, courseTitle, date, refunded, refundAmount, reason }) => {
-  const classDate = new Date(date);
+const sendClassCancelledEmail = async (to, data) => {
+  const { studentName, courseTitle, classDate, classTime, refundedCredits, reason } = data;
   
   return await sendEmail({
     to,
@@ -801,10 +830,10 @@ const sendClassCancelledEmail = async ({ to, studentName, courseTitle, date, ref
     data: {
       studentName,
       courseTitle,
-      classDate: classDate.toLocaleDateString('pt-BR'),
-      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      refunded: refunded ? 'true' : '',
-      refundAmount,
+      classDate,
+      classTime,
+      refunded: refundedCredits > 0 ? 'true' : '',
+      refundAmount: refundedCredits,
       reason: reason || '',
       courseUrl: `${process.env.FRONTEND_URL}/courses`
     }
@@ -812,8 +841,8 @@ const sendClassCancelledEmail = async ({ to, studentName, courseTitle, date, ref
 };
 
 // Função para enviar notificação de cancelamento para o instrutor
-const sendInstructorCancellationNotification = async ({ to, instructorName, studentName, courseTitle, date }) => {
-  const classDate = new Date(date);
+const sendClassCancelledByStudentEmail = async (to, data) => {
+  const { instructorName, studentName, courseTitle, classDate, classTime, reason } = data;
   
   return await sendEmail({
     to,
@@ -822,8 +851,9 @@ const sendInstructorCancellationNotification = async ({ to, instructorName, stud
       instructorName,
       studentName,
       courseTitle,
-      classDate: classDate.toLocaleDateString('pt-BR'),
-      classTime: classDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      classDate,
+      classTime,
+      reason: reason || '',
       calendarUrl: `${process.env.FRONTEND_URL}/dashboard/calendar`
     }
   });
@@ -882,9 +912,9 @@ module.exports = {
   validateEmail,
   testEmailConfiguration,
   sendClassScheduledEmail,
-  sendInstructorClassNotification,
+  sendNewClassNotificationEmail,
   sendClassCancelledEmail,
-  sendInstructorCancellationNotification,
+  sendClassCancelledByStudentEmail,
   sendClassReminderEmail,
   sendInstructorReminderEmail,
   emailTemplates

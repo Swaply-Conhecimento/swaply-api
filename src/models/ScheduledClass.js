@@ -96,6 +96,26 @@ const scheduledClassSchema = new mongoose.Schema({
   feedback: {
     type: String,
     maxlength: [500, 'Feedback não pode ter mais de 500 caracteres']
+  },
+  jitsiRoomName: {
+    type: String,
+    default: null
+  },
+  jitsiInstructorUrl: {
+    type: String,
+    default: null
+  },
+  jitsiStudentUrl: {
+    type: String,
+    default: null
+  },
+  jitsiInstructorToken: {
+    type: String,
+    default: null
+  },
+  jitsiStudentToken: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
