@@ -51,8 +51,23 @@ class SchedulingService {
 
     // Validar data e hora (mínimo 2 horas de antecedência)
     const [hours, minutes] = time.split(':');
-    const classDateTime = new Date(date);
-    classDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    
+    // Construir data/hora corretamente
+    // Se date vier como string "YYYY-MM-DD", criar Date corretamente
+    let classDateTime;
+    if (typeof date === 'string') {
+      // Se for formato ISO ou YYYY-MM-DD
+      if (date.includes('T')) {
+        classDateTime = new Date(date);
+      } else {
+        // Formato YYYY-MM-DD - criar data e depois setar hora
+        classDateTime = new Date(date + 'T00:00:00');
+        classDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      }
+    } else {
+      classDateTime = new Date(date);
+      classDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    }
     
     const now = new Date();
     const minAdvanceTime = 2 * 60 * 60 * 1000; // 2 horas em ms
@@ -69,27 +84,6 @@ class SchedulingService {
     );
 
     if (hasConflict) {
-      // Log para debug
-      const conflictingClasses = await ScheduledClass.find({
-        instructorId: course.instructor._id,
-        status: { $in: ['scheduled', 'in_progress'] },
-        date: {
-          $gte: new Date(classDateTime.getTime() - 24 * 60 * 60 * 1000), // 24h antes
-          $lte: new Date(classDateTime.getTime() + 24 * 60 * 60 * 1000)  // 24h depois
-        }
-      }).select('date duration courseId studentId status').lean();
-      
-      console.log('⚠️ Conflito detectado:', {
-        instructorId: course.instructor._id.toString(),
-        requestedDate: classDateTime.toISOString(),
-        requestedDuration: duration,
-        conflictingClasses: conflictingClasses.map(c => ({
-          date: c.date,
-          duration: c.duration,
-          status: c.status
-        }))
-      });
-      
       throw new Error('Este horário não está disponível');
     }
 

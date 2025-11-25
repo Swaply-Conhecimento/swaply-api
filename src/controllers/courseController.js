@@ -705,12 +705,6 @@ const updateCourse = asyncHandler(async (req, res) => {
   // Upload de imagem se fornecida
   if (req.file) {
     try {
-      console.log('Upload de imagem detectado:', {
-        filename: req.file.filename,
-        mimetype: req.file.mimetype,
-        size: req.file.size
-      });
-      
       // Deletar imagem anterior se existir
       if (course.image) {
         try {
@@ -728,11 +722,6 @@ const updateCourse = asyncHandler(async (req, res) => {
       const uploadResult = await uploadImageToCloud(req.file.path, 'swaply/courses');
       course.image = uploadResult.url;
       course.imagePublicId = uploadResult.public_id;
-      
-      console.log('Imagem do curso atualizada com sucesso:', {
-        courseId: course._id,
-        imageUrl: course.image
-      });
     } catch (uploadError) {
       console.error('Erro ao fazer upload da imagem do curso:', {
         userId: req.user._id,
@@ -743,14 +732,6 @@ const updateCourse = asyncHandler(async (req, res) => {
     } finally {
       await deleteFile(req.file.path).catch(() => {});
     }
-  } else {
-    // Log para debug quando não há arquivo
-    const contentType = req.headers['content-type'] || '';
-    console.log('Nenhum arquivo de imagem recebido:', {
-      contentType: contentType.substring(0, 50),
-      hasFile: !!req.file,
-      imageInBody: req.body.image !== undefined
-    });
   }
 
   await course.save();
