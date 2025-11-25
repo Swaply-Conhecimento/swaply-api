@@ -182,15 +182,27 @@ instructorAvailabilitySchema.methods.blockDate = function(date, reason = 'Indisp
 instructorAvailabilitySchema.methods.getAvailabilityForPeriod = function(startDate, endDate) {
   const slots = [];
   const currentDate = new Date(startDate);
+  currentDate.setHours(0, 0, 0, 0); // Normalizar para início do dia
   
-  while (currentDate <= endDate) {
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999); // Normalizar para fim do dia
+  
+  while (currentDate <= end) {
     const dayOfWeek = currentDate.getDay();
-    const dateStr = currentDate.toISOString().split('T')[0];
+    // Usar formato YYYY-MM-DD para comparação (ignorando timezone)
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
     
     // Verificar se há slot específico para esta data
     const specificSlot = this.specificSlots.find(slot => {
-      const slotDate = new Date(slot.date).toISOString().split('T')[0];
-      return slotDate === dateStr;
+      const slotDate = new Date(slot.date);
+      const slotYear = slotDate.getFullYear();
+      const slotMonth = String(slotDate.getMonth() + 1).padStart(2, '0');
+      const slotDay = String(slotDate.getDate()).padStart(2, '0');
+      const slotDateStr = `${slotYear}-${slotMonth}-${slotDay}`;
+      return slotDateStr === dateStr;
     });
     
     if (specificSlot) {
