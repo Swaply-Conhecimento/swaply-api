@@ -14,6 +14,7 @@ const {
   unenrollFromCourse,
   getCourseStudents,
   uploadCourseImage,
+  removeCourseImage,
   getCourseReviews,
 } = require("../controllers/courseController");
 const { getCourseAvailability } = require("../controllers/classController");
@@ -180,6 +181,14 @@ router.post(
   uploadMiddleware,
   cleanupTempFiles,
   uploadCourseImage
+);
+
+router.delete(
+  "/:id/image",
+  paramValidators.id,
+  handleValidationErrors,
+  requireCourseOwnership,
+  removeCourseImage
 );
 
 // Rotas de avaliações

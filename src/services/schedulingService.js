@@ -4,7 +4,7 @@ const User = require('../models/User');
 const { jitsiService } = require('./jitsiService');
 const notificationService = require('./notificationService');
 const emailService = require('./emailService');
-const paymentService = require('./paymentService');
+const { paymentService } = require('./paymentService');
 
 class SchedulingService {
   /**
@@ -69,6 +69,27 @@ class SchedulingService {
     );
 
     if (hasConflict) {
+      // Log para debug
+      const conflictingClasses = await ScheduledClass.find({
+        instructorId: course.instructor._id,
+        status: { $in: ['scheduled', 'in_progress'] },
+        date: {
+          $gte: new Date(classDateTime.getTime() - 24 * 60 * 60 * 1000), // 24h antes
+          $lte: new Date(classDateTime.getTime() + 24 * 60 * 60 * 1000)  // 24h depois
+        }
+      }).select('date duration courseId studentId status').lean();
+      
+      console.log('⚠️ Conflito detectado:', {
+        instructorId: course.instructor._id.toString(),
+        requestedDate: classDateTime.toISOString(),
+        requestedDuration: duration,
+        conflictingClasses: conflictingClasses.map(c => ({
+          date: c.date,
+          duration: c.duration,
+          status: c.status
+        }))
+      });
+      
       throw new Error('Este horário não está disponível');
     }
 
@@ -91,6 +112,15 @@ class SchedulingService {
     if (classesToday >= maxClassesPerDay) {
       throw new Error(`Você atingiu o limite de ${maxClassesPerDay} aulas por dia`);
     }
+
+    // Deduzir créditos ANTES de criar a aula (para evitar criar aula se falhar)
+    await paymentService.spendCredits(
+      studentId,
+      creditsNeeded,
+      `Aula agendada: ${course.title}`,
+      courseId,
+      null // classId será atualizado depois
+    );
 
     // Criar sala Jitsi para a aula
     const jitsiMeeting = await jitsiService.createClassMeeting(
@@ -117,15 +147,9 @@ class SchedulingService {
     });
 
     await scheduledClass.save();
-
-    // Deduzir créditos do estudante
-    await paymentService.spendCredits(
-      studentId,
-      creditsNeeded,
-      `Aula agendada: ${course.title}`,
-      courseId,
-      scheduledClass._id
-    );
+    
+    // Atualizar o payment com o classId (se necessário)
+    // O paymentService já criou o payment, mas podemos atualizar se precisar
 
     // Popular dados para retorno
     await scheduledClass.populate([

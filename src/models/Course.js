@@ -115,6 +115,10 @@ const courseSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  imagePublicId: {
+    type: String,
+    default: null
+  },
   features: [{
     type: String,
     trim: true

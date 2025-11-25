@@ -3,7 +3,7 @@ const User = require('../models/User');
 const Review = require('../models/Review');
 const InstructorAvailability = require('../models/InstructorAvailability');
 const { uploadImage, deleteFile } = require('../middleware/upload');
-const { uploadImage: uploadImageToCloud, deleteImage } = require('../config/cloudinary');
+const { uploadImage: uploadImageToCloud, deleteImage, extractPublicIdFromUrl } = require('../config/cloudinary');
 const { validationResult } = require('express-validator');
 const { createApiResponse } = require('../utils/helpers');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -127,12 +127,60 @@ const sanitizeCourseData = (data) => {
   }
 
   // Sanitizar tags: desstringificar se for JSON string
-  if (sanitized.tags && Array.isArray(sanitized.tags)) {
-    sanitized.tags = sanitized.tags
-      .map(tag => parseNestedArray(tag))
-      .flat()
-      .filter(t => t && String(t).trim() !== '') // Remover vazios
-      .map(t => String(t).toLowerCase().trim()); // Normalizar para lowercase
+  if (sanitized.tags) {
+    // Se for string, tentar fazer parse
+    if (typeof sanitized.tags === 'string') {
+      try {
+        const parsed = JSON.parse(sanitized.tags);
+        sanitized.tags = Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        // Se não for JSON válido, tratar como string simples
+        sanitized.tags = [sanitized.tags];
+      }
+    }
+    
+    // Se for array, processar cada item
+    if (Array.isArray(sanitized.tags)) {
+      sanitized.tags = sanitized.tags
+        .map(tag => parseNestedArray(tag))
+        .flat()
+        .filter(t => t && String(t).trim() !== '') // Remover vazios
+        .map(t => String(t).toLowerCase().trim()); // Normalizar para lowercase
+    }
+  }
+
+  // Sanitizar pricing: desstringificar se for JSON string
+  if (sanitized.pricing) {
+    if (typeof sanitized.pricing === 'string') {
+      try {
+        sanitized.pricing = JSON.parse(sanitized.pricing);
+      } catch (error) {
+        console.warn('Erro ao fazer parse do pricing:', error.message);
+        // Se falhar o parse, tentar manter como está ou remover
+        delete sanitized.pricing;
+      }
+    }
+    // Validar estrutura do pricing
+    if (sanitized.pricing && typeof sanitized.pricing === 'object') {
+      // Garantir que singleClass e fullCourse sejam números
+      if (sanitized.pricing.singleClass !== undefined) {
+        sanitized.pricing.singleClass = Number(sanitized.pricing.singleClass);
+      }
+      if (sanitized.pricing.fullCourse !== undefined) {
+        sanitized.pricing.fullCourse = Number(sanitized.pricing.fullCourse);
+      }
+    }
+  }
+
+  // Sanitizar outros campos numéricos que podem vir como string
+  if (sanitized.pricePerHour !== undefined) {
+    sanitized.pricePerHour = Number(sanitized.pricePerHour);
+  }
+  if (sanitized.totalHours !== undefined) {
+    sanitized.totalHours = Number(sanitized.totalHours);
+  }
+  if (sanitized.maxStudents !== undefined) {
+    sanitized.maxStudents = Number(sanitized.maxStudents);
   }
 
   return sanitized;
@@ -463,7 +511,23 @@ const createCourse = asyncHandler(async (req, res) => {
 
   try {
     // Mapear 'language' para 'courseLanguage' para evitar conflito com MongoDB
-    const { language, availability, ...restBody } = req.body;
+    let { language, availability, image, ...restBody } = req.body;
+    
+    // Remover campo image se vier como objeto vazio ou string vazia (não é arquivo)
+    // O upload de imagem real vem via req.file quando é multipart/form-data
+    if (image !== undefined && (image === null || image === '' || (typeof image === 'object' && Object.keys(image).length === 0))) {
+      delete restBody.image;
+    }
+    
+    // Parse availability se vier como string JSON
+    if (availability && typeof availability === 'string') {
+      try {
+        availability = JSON.parse(availability);
+      } catch (error) {
+        console.warn('Erro ao fazer parse do availability:', error.message);
+        availability = null;
+      }
+    }
     
     // Sanitizar dados antes de processar
     const sanitizedData = sanitizeCourseData(restBody);
@@ -483,6 +547,7 @@ const createCourse = asyncHandler(async (req, res) => {
       try {
         const uploadResult = await uploadImageToCloud(req.file.path, 'swaply/courses');
         courseData.image = uploadResult.url;
+        courseData.imagePublicId = uploadResult.public_id;
       } catch (uploadError) {
         console.error('Erro ao fazer upload da imagem do curso:', {
           userId: req.user._id,
@@ -598,7 +663,24 @@ const updateCourse = asyncHandler(async (req, res) => {
   const course = req.course; // Vem do middleware requireCourseOwnership
 
   // Sanitizar dados antes de processar
-  const { availability, language, ...restBody } = req.body;
+  let { availability, language, image, ...restBody } = req.body;
+  
+  // Remover campo image se vier como objeto vazio ou string vazia (não é arquivo)
+  // O upload de imagem real vem via req.file quando é multipart/form-data
+  if (image !== undefined && (image === null || image === '' || (typeof image === 'object' && Object.keys(image).length === 0))) {
+    delete restBody.image;
+  }
+  
+  // Parse availability se vier como string JSON
+  if (availability && typeof availability === 'string') {
+    try {
+      availability = JSON.parse(availability);
+    } catch (error) {
+      console.warn('Erro ao fazer parse do availability:', error.message);
+      availability = null;
+    }
+  }
+  
   const sanitizedData = sanitizeCourseData(restBody);
 
   // Atualizar campos permitidos
@@ -623,11 +705,20 @@ const updateCourse = asyncHandler(async (req, res) => {
   // Upload de imagem se fornecida
   if (req.file) {
     try {
+      console.log('Upload de imagem detectado:', {
+        filename: req.file.filename,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      });
+      
       // Deletar imagem anterior se existir
       if (course.image) {
         try {
-          const publicId = course.image.split('/').pop().split('.')[0];
-          await deleteImage(`swaply/courses/${publicId}`);
+          // Usar imagePublicId se disponível, senão extrair da URL
+          const publicId = course.imagePublicId || extractPublicIdFromUrl(course.image);
+          if (publicId) {
+            await deleteImage(publicId);
+          }
         } catch (deleteError) {
           // Erro ao deletar imagem anterior - silencioso
           console.warn('Erro ao deletar imagem anterior:', deleteError.message);
@@ -636,6 +727,12 @@ const updateCourse = asyncHandler(async (req, res) => {
 
       const uploadResult = await uploadImageToCloud(req.file.path, 'swaply/courses');
       course.image = uploadResult.url;
+      course.imagePublicId = uploadResult.public_id;
+      
+      console.log('Imagem do curso atualizada com sucesso:', {
+        courseId: course._id,
+        imageUrl: course.image
+      });
     } catch (uploadError) {
       console.error('Erro ao fazer upload da imagem do curso:', {
         userId: req.user._id,
@@ -646,6 +743,14 @@ const updateCourse = asyncHandler(async (req, res) => {
     } finally {
       await deleteFile(req.file.path).catch(() => {});
     }
+  } else {
+    // Log para debug quando não há arquivo
+    const contentType = req.headers['content-type'] || '';
+    console.log('Nenhum arquivo de imagem recebido:', {
+      contentType: contentType.substring(0, 50),
+      hasFile: !!req.file,
+      imageInBody: req.body.image !== undefined
+    });
   }
 
   await course.save();
@@ -849,21 +954,26 @@ const uploadCourseImage = asyncHandler(async (req, res) => {
   const course = req.course; // Vem do middleware requireCourseOwnership
 
   try {
-    // Upload para Cloudinary
-    const result = await uploadImageToCloud(req.file.path, 'swaply/courses');
-
     // Deletar imagem anterior se existir
     if (course.image) {
       try {
-        const publicId = course.image.split('/').pop().split('.')[0];
-        await deleteImage(`swaply/courses/${publicId}`);
+        // Usar imagePublicId se disponível, senão extrair da URL
+        const publicId = course.imagePublicId || extractPublicIdFromUrl(course.image);
+        if (publicId) {
+          await deleteImage(publicId);
+        }
       } catch (deleteError) {
         // Erro ao deletar imagem anterior - silencioso
+        console.warn('Erro ao deletar imagem anterior:', deleteError.message);
       }
     }
 
+    // Upload para Cloudinary
+    const result = await uploadImageToCloud(req.file.path, 'swaply/courses');
+
     // Atualizar curso
     course.image = result.url;
+    course.imagePublicId = result.public_id;
     await course.save();
 
     // Limpar arquivo temporário
@@ -878,6 +988,48 @@ const uploadCourseImage = asyncHandler(async (req, res) => {
   } catch (error) {
     // Limpar arquivo temporário em caso de erro
     await deleteFile(req.file.path);
+    throw error;
+  }
+});
+
+// Remover imagem do curso
+const removeCourseImage = asyncHandler(async (req, res) => {
+  const course = req.course; // Vem do middleware requireCourseOwnership
+
+  if (!course.image) {
+    return res.status(400).json(createApiResponse(
+      false,
+      'Curso não possui imagem'
+    ));
+  }
+
+  try {
+    // Deletar do Cloudinary
+    const publicId = course.imagePublicId || extractPublicIdFromUrl(course.image);
+    if (publicId) {
+      try {
+        await deleteImage(publicId);
+      } catch (deleteError) {
+        console.warn('Erro ao deletar imagem do Cloudinary:', deleteError.message);
+        // Continuar mesmo se falhar a deleção no Cloudinary
+      }
+    }
+
+    // Remover do banco de dados
+    course.image = null;
+    course.imagePublicId = null;
+    await course.save();
+
+    res.json(createApiResponse(
+      true,
+      'Imagem do curso removida com sucesso'
+    ));
+
+  } catch (error) {
+    console.error('Erro ao remover imagem do curso:', {
+      courseId: course._id,
+      error: error.message
+    });
     throw error;
   }
 });
@@ -939,5 +1091,6 @@ module.exports = {
   unenrollFromCourse,
   getCourseStudents,
   uploadCourseImage,
+  removeCourseImage,
   getCourseReviews
 };

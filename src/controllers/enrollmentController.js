@@ -63,7 +63,7 @@ const enrollInFullCourse = asyncHandler(async (req, res) => {
 
   // Criar registro de pagamento
   const payment = new Payment({
-    user: studentId,
+    userId: studentId,
     type: 'credit_spent',
     amount: course.pricing.fullCourse,
     credits: course.pricing.fullCourse,
@@ -158,7 +158,7 @@ const enrollInSingleClass = asyncHandler(async (req, res) => {
 
     // Criar registro de pagamento
     const payment = new Payment({
-      user: studentId,
+      userId: studentId,
       type: 'credit_spent',
       amount: course.pricing.singleClass,
       credits: course.pricing.singleClass,
@@ -407,7 +407,7 @@ const cancelEnrollment = asyncHandler(async (req, res) => {
 
     // Criar registro de pagamento de reembolso
     const refundPayment = new Payment({
-      user: userId,
+      userId: userId,
       type: 'refund',
       amount: refundAmount,
       credits: refundAmount,
