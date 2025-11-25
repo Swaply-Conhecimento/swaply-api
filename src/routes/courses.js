@@ -146,6 +146,8 @@ router.put(
   paramValidators.id,
   handleValidationErrors,
   requireCourseOwnership,
+  handleOptionalCourseImageUpload,
+  cleanupTempFiles,
   sanitizeInput,
   courseValidators.update,
   handleValidationErrors,

@@ -10,6 +10,8 @@
     "test:watch": "jest --watch",
     "seed": "node scripts/seed.js",
     "seed:dev": "NODE_ENV=development node scripts/seed.js",
+    "seed:user": "node scripts/seed.js",
+    "cleanup": "node scripts/cleanup.js",
     "lint": "eslint src/ --ext .js",
     "lint:fix": "eslint src/ --ext .js --fix",
     "format": "prettier --write \"src/**/*.js\"",

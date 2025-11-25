@@ -405,6 +405,34 @@ const updateCourse = asyncHandler(async (req, res) => {
     course.courseLanguage = req.body.language;
   }
 
+  // Upload de imagem se fornecida
+  if (req.file) {
+    try {
+      // Deletar imagem anterior se existir
+      if (course.image) {
+        try {
+          const publicId = course.image.split('/').pop().split('.')[0];
+          await deleteImage(`swaply/courses/${publicId}`);
+        } catch (deleteError) {
+          // Erro ao deletar imagem anterior - silencioso
+          console.warn('Erro ao deletar imagem anterior:', deleteError.message);
+        }
+      }
+
+      const uploadResult = await uploadImageToCloud(req.file.path, 'swaply/courses');
+      course.image = uploadResult.url;
+    } catch (uploadError) {
+      console.error('Erro ao fazer upload da imagem do curso:', {
+        userId: req.user._id,
+        courseId: course._id,
+        error: uploadError.message
+      });
+      throw new Error('Erro ao fazer upload da imagem do curso');
+    } finally {
+      await deleteFile(req.file.path).catch(() => {});
+    }
+  }
+
   await course.save();
 
   const populatedCourse = await Course.findById(course._id)

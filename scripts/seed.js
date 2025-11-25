@@ -258,15 +258,37 @@ const createUsers = async () => {
 };
 
 // Função para criar cursos
-const createCourses = async (users) => {
+const createCourses = async (users, specificInstructorId = null) => {
   console.log('📚 Criando cursos...');
   
-  const instructors = users.filter(user => user.isInstructor);
+  let instructor;
+  
+  // Se um ID específico foi fornecido, usar esse usuário
+  if (specificInstructorId) {
+    instructor = await User.findById(specificInstructorId);
+    if (!instructor) {
+      throw new Error(`Usuário com ID ${specificInstructorId} não encontrado`);
+    }
+    // Garantir que o usuário seja instrutor
+    if (!instructor.isInstructor) {
+      console.log('⚠️  Usuário não é instrutor. Definindo isInstructor = true...');
+      instructor.isInstructor = true;
+      await instructor.save();
+    }
+    console.log(`✅ Usando instrutor: ${instructor.name} (${instructor.email})`);
+  } else {
+    // Usar lógica original
+    const instructors = users.filter(user => user.isInstructor);
+    if (instructors.length === 0) {
+      throw new Error('Nenhum instrutor encontrado');
+    }
+    instructor = instructors[0];
+  }
+  
   const courses = [];
   
   for (let i = 0; i < seedData.courses.length; i++) {
     const courseData = seedData.courses[i];
-    const instructor = instructors[i % instructors.length];
     
     const course = new Course({
       ...courseData,
@@ -277,8 +299,8 @@ const createCourses = async (users) => {
     await course.save();
     courses.push(course);
     
-    // Adicionar alguns estudantes matriculados
-    const students = users.filter(user => !user.isInstructor);
+    // Adicionar alguns estudantes matriculados (se houver)
+    const students = users.filter(user => !user.isInstructor && user._id.toString() !== instructor._id.toString());
     const enrolledStudents = students.slice(0, Math.floor(Math.random() * students.length));
     
     for (const student of enrolledStudents) {
@@ -297,11 +319,21 @@ const createReviews = async (courses, users) => {
   
   const students = users.filter(user => !user.isInstructor);
   
+  // Se não houver estudantes, não criar avaliações
+  if (students.length === 0) {
+    console.log('⚠️  Nenhum estudante encontrado. Pulando criação de avaliações.');
+    return;
+  }
+  
   for (const course of courses) {
     const numReviews = Math.floor(Math.random() * 5) + 1;
     
     for (let i = 0; i < numReviews; i++) {
       const student = students[Math.floor(Math.random() * students.length)];
+      
+      if (!student) {
+        continue;
+      }
       
       // Verificar se estudante está matriculado
       if (!course.enrolledStudents.includes(student._id)) {
@@ -381,35 +413,50 @@ const createPayments = async (users) => {
 };
 
 // Função principal
-const seedDatabase = async () => {
+const seedDatabase = async (specificInstructorId = null) => {
   try {
     await connectDB();
     
     console.log('🗑️  Limpando banco de dados...');
-    await User.deleteMany({});
+    // Não deletar usuários se estiver usando um ID específico
+    if (!specificInstructorId) {
+      await User.deleteMany({});
+    }
     await Course.deleteMany({});
     await Review.deleteMany({});
     await Payment.deleteMany({});
     
     console.log('🌱 Iniciando seed do banco de dados...');
     
-    const users = await createUsers();
-    const courses = await createCourses(users);
+    let users = [];
+    if (!specificInstructorId) {
+      users = await createUsers();
+    } else {
+      // Buscar usuários existentes para usar como estudantes (se necessário)
+      users = await User.find({});
+    }
+    
+    const courses = await createCourses(users, specificInstructorId);
     await createReviews(courses, users);
     await createPayments(users);
     
     console.log('\n🎉 Seed concluído com sucesso!');
     console.log('\n📊 Resumo:');
-    console.log(`👥 Usuários: ${users.length}`);
-    console.log(`📚 Cursos: ${courses.length}`);
+    console.log(`👥 Usuários no banco: ${await User.countDocuments()}`);
+    console.log(`📚 Cursos criados: ${courses.length}`);
     console.log(`⭐ Avaliações: ${await Review.countDocuments()}`);
     console.log(`💰 Transações: ${await Payment.countDocuments()}`);
     
-    console.log('\n🔐 Credenciais de teste:');
-    console.log('📧 Email: joao@swaply.com | 🔑 Senha: 123456 (Instrutor)');
-    console.log('📧 Email: maria@swaply.com | 🔑 Senha: 123456 (Instrutor)');
-    console.log('📧 Email: pedro@swaply.com | 🔑 Senha: 123456 (Estudante)');
-    console.log('📧 Email: ana@swaply.com | 🔑 Senha: 123456 (Instrutor)');
+    if (specificInstructorId) {
+      const instructor = await User.findById(specificInstructorId);
+      console.log(`\n👨‍🏫 Instrutor dos cursos: ${instructor.name} (${instructor.email})`);
+    } else {
+      console.log('\n🔐 Credenciais de teste:');
+      console.log('📧 Email: joao@swaply.com | 🔑 Senha: 123456 (Instrutor)');
+      console.log('📧 Email: maria@swaply.com | 🔑 Senha: 123456 (Instrutor)');
+      console.log('📧 Email: pedro@swaply.com | 🔑 Senha: 123456 (Estudante)');
+      console.log('📧 Email: ana@swaply.com | 🔑 Senha: 123456 (Instrutor)');
+    }
     
     process.exit(0);
     
@@ -421,7 +468,9 @@ const seedDatabase = async () => {
 
 // Executar seed se chamado diretamente
 if (require.main === module) {
-  seedDatabase();
+  // Verificar se foi passado um ID de instrutor como argumento
+  const instructorId = process.argv[2] || null;
+  seedDatabase(instructorId);
 }
 
 module.exports = seedDatabase;
