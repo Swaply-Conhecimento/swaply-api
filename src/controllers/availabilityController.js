@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const InstructorAvailability = require('../models/InstructorAvailability');
 const ScheduledClass = require('../models/ScheduledClass');
 const Course = require('../models/Course');
@@ -234,32 +235,131 @@ const getAvailableSlots = asyncHandler(async (req, res) => {
     return res.status(400).json(createApiResponse(false, 'ID do instrutor é obrigatório'));
   }
 
-  const availability = await InstructorAvailability.findOne({
-    instructor: instructorId,
-    course: courseId || null,
-    isActive: true
+  // Buscar disponibilidade: primeiro específica do curso, depois geral do instrutor
+  let availability = null;
+  
+  // Converter IDs para ObjectId se necessário
+  const instructorObjectId = mongoose.Types.ObjectId.isValid(instructorId) 
+    ? new mongoose.Types.ObjectId(instructorId) 
+    : instructorId;
+  const courseObjectId = courseId && mongoose.Types.ObjectId.isValid(courseId)
+    ? new mongoose.Types.ObjectId(courseId)
+    : courseId;
+  
+  // Log para debug
+  console.log('🔍 Buscando disponibilidade:', {
+    instructorId: instructorObjectId.toString(),
+    courseId: courseObjectId ? courseObjectId.toString() : 'null',
+    startDate,
+    endDate
   });
+  
+  if (courseObjectId) {
+    // Tentar buscar disponibilidade específica do curso
+    // Primeiro sem verificar isActive
+    availability = await InstructorAvailability.findOne({
+      instructor: instructorObjectId,
+      course: courseObjectId
+    });
+    
+    console.log('🔍 Busca específica do curso:', {
+      courseId: courseObjectId.toString(),
+      found: !!availability,
+      availabilityId: availability?._id?.toString(),
+      isActive: availability?.isActive,
+      hasRecurring: availability?.recurringAvailability?.length > 0,
+      hasSpecific: availability?.specificSlots?.length > 0
+    });
+  }
+  
+  // Se não encontrou específica, buscar disponibilidade geral do instrutor
+  if (!availability) {
+    availability = await InstructorAvailability.findOne({
+      instructor: instructorObjectId,
+      course: null
+    });
+    
+    console.log('🔍 Busca geral do instrutor:', {
+      found: !!availability,
+      availabilityId: availability?._id?.toString(),
+      isActive: availability?.isActive,
+      hasRecurring: availability?.recurringAvailability?.length > 0,
+      hasSpecific: availability?.specificSlots?.length > 0
+    });
+  }
 
   if (!availability) {
+    // Log de todas as disponibilidades do instrutor para debug
+    const allAvailabilities = await InstructorAvailability.find({
+      instructor: instructorObjectId
+    }).select('course isActive recurringAvailability specificSlots').lean();
+    
+    console.log('🔍 Todas as disponibilidades do instrutor:', {
+      instructorId: instructorObjectId.toString(),
+      count: allAvailabilities.length,
+      availabilities: allAvailabilities.map(av => ({
+        id: av._id?.toString(),
+        course: av.course?.toString() || 'null',
+        isActive: av.isActive,
+        recurringCount: av.recurringAvailability?.length || 0,
+        specificCount: av.specificSlots?.length || 0
+      }))
+    });
+    
     return res.json(createApiResponse(
       true,
       'Nenhuma disponibilidade configurada',
       { slots: [] }
     ));
   }
+  
+  // Verificar se está ativa (mas não bloquear se não estiver definido)
+  if (availability.isActive === false) {
+    console.log('⚠️ Disponibilidade encontrada mas está inativa:', availability._id);
+    return res.json(createApiResponse(
+      true,
+      'Disponibilidade está inativa',
+      { slots: [] }
+    ));
+  }
 
-  // Definir período de busca
-  const start = startDate ? new Date(startDate) : new Date();
-  const end = endDate 
-    ? new Date(endDate) 
-    : new Date(Date.now() + (availability.maxAdvanceBooking * 24 * 60 * 60 * 1000));
+  // Definir período de busca - normalizar para início e fim do dia
+  let start, end;
+  
+  if (startDate) {
+    start = new Date(startDate);
+    start.setHours(0, 0, 0, 0); // Início do dia
+  } else {
+    start = new Date();
+    start.setHours(0, 0, 0, 0);
+  }
+  
+  if (endDate) {
+    end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Fim do dia
+  } else {
+    end = new Date(Date.now() + (availability.maxAdvanceBooking * 24 * 60 * 60 * 1000));
+    end.setHours(23, 59, 59, 999);
+  }
 
   // Obter disponibilidade base
   const baseSlots = availability.getAvailabilityForPeriod(start, end);
+  
+  // Log para debug
+  console.log('🔍 getAvailableSlots - Debug:', {
+    instructorId,
+    courseId: courseId || 'null (geral)',
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    availabilityType: availability.course ? 'course-specific' : 'general',
+    recurringSlots: availability.recurringAvailability?.length || 0,
+    specificSlots: availability.specificSlots?.length || 0,
+    baseSlotsFound: baseSlots.length
+  });
 
   // Buscar aulas já agendadas no período
   const scheduledClasses = await ScheduledClass.find({
-    instructorId,
+    instructorId: instructorObjectId,
     status: { $in: ['scheduled', 'in_progress'] },
     date: { $gte: start, $lte: end }
   }).select('date duration');
