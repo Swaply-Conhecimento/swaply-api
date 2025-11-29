@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const Notification = require("../models/Notification");
+const { authenticate } = require("../middleware/auth");
+
+// Todas as rotas de notificações requerem autenticação do usuário
+router.use(authenticate);
 // GET /api/notifications - Listar notificações do usuário com filtros e paginação
 router.get("/", async (req, res) => {
   try {
