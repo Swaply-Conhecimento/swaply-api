@@ -2,18 +2,15 @@ pipeline {
     agent any
 
     options {
-        // Mantém o histórico de builds mais limpo
         buildDiscarder(logRotator(numToKeepStr: '20'))
         timestamps()
     }
 
     triggers {
-        // Executa a pipeline a cada 10 minutos
-        cron('H/10 * * * *')
+        cron('H 2 * * *')
     }
 
     environment {
-        // Ajuste se necessário no Jenkins
         NODE_ENV = 'test'
     }
 
@@ -27,7 +24,6 @@ pipeline {
         stage('Instalar dependências') {
             steps {
                 script {
-                    // Usa npm ci se o package-lock.json existir, senão npm install
                     if (fileExists('package-lock.json')) {
                         bat 'npm ci'
                     } else {
@@ -51,7 +47,6 @@ pipeline {
 
         stage('Build') {
             steps {
-                // Atualmente o script de build apenas exibe uma mensagem (ver package.json)
                 bat 'npm run build'
             }
         }
