@@ -8,8 +8,8 @@ pipeline {
     }
 
     triggers {
-        // Executa a pipeline a cada hora, no minuto 0
-        cron('0 * * * *')
+        // Executa a pipeline a cada 10 minutos
+        cron('H/10 * * * *')
     }
 
     environment {
