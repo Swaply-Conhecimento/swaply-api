@@ -1,4 +1,5 @@
 const request = require('supertest');
+const mongoose = require('mongoose');
 const app = require('../src/app');
 const User = require('../src/models/User');
 const { connectDB } = require('../src/config/database');
@@ -17,8 +18,10 @@ describe('Auth Endpoints', () => {
   });
 
   afterAll(async () => {
-    // Fechar conexão após todos os testes
-    await mongoose.connection.close();
+    // Fechar conexão após todos os testes (se ainda estiver aberta)
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
   });
 
   describe('POST /api/auth/register', () => {
@@ -171,6 +174,48 @@ describe('Auth Endpoints', () => {
     it('deve retornar erro quando não há token', async () => {
       const response = await request(app)
         .get('/api/auth/verify-token')
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Token de acesso não fornecido');
+    });
+  });
+
+  describe('POST /api/auth/logout', () => {
+    let token;
+
+    beforeEach(async () => {
+      // Criar usuário e obter token de autenticação
+      const user = new User({
+        name: 'Maria Souza',
+        email: 'maria@test.com',
+        password: '123456'
+      });
+      await user.save();
+
+      const loginResponse = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'maria@test.com',
+          password: '123456'
+        });
+
+      token = loginResponse.body.data.token;
+    });
+
+    it('deve fazer logout com token válido', async () => {
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toContain('Logout realizado com sucesso');
+    });
+
+    it('deve retornar erro quando não há token', async () => {
+      const response = await request(app)
+        .post('/api/auth/logout')
         .expect(401);
 
       expect(response.body.success).toBe(false);

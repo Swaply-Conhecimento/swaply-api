@@ -16,6 +16,9 @@ const classRoutes = require("./routes/classes");
 const instructorRoutes = require("./routes/instructors");
 const notificationRoutes = require("./routes/notifications");
 const feedbackRoutes = require("./routes/feedback");
+const availabilityRoutes = require("./routes/availability");
+const enrollmentRoutes = require("./routes/enrollments");
+const statsRoutes = require('./routes/stats');
 
 const app = express();
 
@@ -126,12 +129,15 @@ app.get("/api", (req, res) => {
 
 // Rotas da API
 app.use("/api/auth", authRoutes);
+app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/classes", classRoutes);
 app.use("/api/instructors", instructorRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/availability", availabilityRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Rota para servir arquivos estáticos (uploads)
 app.use("/uploads", express.static("uploads"));

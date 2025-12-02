@@ -22,7 +22,7 @@ const scheduleClass = asyncHandler(async (req, res) => {
     ));
   }
 
-  const { courseId, date, duration = 1, notes = '' } = req.body;
+  const { courseId, date, time, duration = 1, notes = '' } = req.body;
   const studentId = req.user._id;
 
   try {
@@ -30,6 +30,7 @@ const scheduleClass = asyncHandler(async (req, res) => {
       courseId,
       studentId,
       date,
+      time,
       duration,
       notes
     });
@@ -423,6 +424,62 @@ const getClassHistory = asyncHandler(async (req, res) => {
   ));
 });
 
+/**
+ * GET /classes/:id/access
+ * Obter link de acesso à sala virtual
+ */
+const getClassAccessLink = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  try {
+    const accessInfo = await schedulingService.getClassAccessLink(id, userId);
+
+    res.json(createApiResponse(
+      true,
+      'Link de acesso obtido com sucesso',
+      accessInfo
+    ));
+  } catch (error) {
+    const statusCode = error.message.includes('não encontrada') ? 404 :
+                       error.message.includes('permissão') || 
+                       error.message.includes('disponível') ? 403 : 500;
+
+    return res.status(statusCode).json(createApiResponse(
+      false,
+      error.message
+    ));
+  }
+});
+
+/**
+ * GET /classes/instructor/:instructorId/availability
+ * Obter disponibilidade do instrutor
+ */
+const getInstructorAvailability = asyncHandler(async (req, res) => {
+  const { instructorId } = req.params;
+  const { startDate, endDate } = req.query;
+
+  try {
+    const availability = await schedulingService.getInstructorAvailability(
+      instructorId,
+      startDate,
+      endDate
+    );
+
+    res.json(createApiResponse(
+      true,
+      'Disponibilidade obtida com sucesso',
+      availability
+    ));
+  } catch (error) {
+    return res.status(500).json(createApiResponse(
+      false,
+      error.message
+    ));
+  }
+});
+
 module.exports = {
   scheduleClass,
   getScheduledClasses,
@@ -433,5 +490,7 @@ module.exports = {
   markAttendance,
   rateClass,
   getUpcomingClasses,
-  getClassHistory
+  getClassHistory,
+  getClassAccessLink,
+  getInstructorAvailability
 };

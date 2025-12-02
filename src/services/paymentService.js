@@ -121,6 +121,7 @@ class PaymentService {
         throw new Error('Créditos insuficientes');
       }
 
+      // Criar payment com status pending para poder processar
       const payment = new Payment({
         userId,
         type: PAYMENT_TYPES.CREDIT_SPENT,
@@ -130,11 +131,11 @@ class PaymentService {
         courseId,
         classId,
         paymentMethod: 'internal',
-        status: PAYMENT_STATUS.COMPLETED
+        status: PAYMENT_STATUS.PENDING
       });
 
       await payment.save();
-      await payment.process();
+      await payment.process(); // Isso vai atualizar para completed e deduzir créditos
 
       return {
         success: true,
@@ -154,6 +155,7 @@ class PaymentService {
         throw new Error('Usuário não encontrado');
       }
 
+      // Criar payment com status pending para poder processar
       const payment = new Payment({
         userId,
         type: PAYMENT_TYPES.CREDIT_EARNED,
@@ -163,11 +165,11 @@ class PaymentService {
         courseId,
         classId,
         paymentMethod: 'internal',
-        status: PAYMENT_STATUS.COMPLETED
+        status: PAYMENT_STATUS.PENDING
       });
 
       await payment.save();
-      await payment.process();
+      await payment.process(); // Isso vai atualizar para completed e adicionar créditos
 
       return {
         success: true,

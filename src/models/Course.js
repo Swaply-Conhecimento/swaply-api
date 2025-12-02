@@ -79,6 +79,19 @@ const courseSchema = new mongoose.Schema({
     required: [true, 'Total de horas é obrigatório'],
     min: [1, 'Mínimo de 1 hora']
   },
+  // Preços
+  pricing: {
+    singleClass: {
+      type: Number,
+      required: [true, 'Preço da aula avulsa é obrigatório'],
+      min: [1, 'Preço mínimo é 1 crédito']
+    },
+    fullCourse: {
+      type: Number,
+      required: [true, 'Preço do curso completo é obrigatório'],
+      min: [1, 'Preço mínimo é 1 crédito']
+    }
+  },
   maxStudents: {
     type: Number,
     default: 50,
@@ -99,6 +112,10 @@ const courseSchema = new mongoose.Schema({
     default: 0
   },
   image: {
+    type: String,
+    default: null
+  },
+  imagePublicId: {
     type: String,
     default: null
   },
@@ -129,20 +146,6 @@ const courseSchema = new mongoose.Schema({
   isLive: {
     type: Boolean,
     default: true
-  },
-  zoomSettings: {
-    meetingId: {
-      type: String,
-      default: null
-    },
-    password: {
-      type: String,
-      default: null
-    },
-    recurringMeeting: {
-      type: Boolean,
-      default: false
-    }
   },
   enrolledStudents: [{
     type: mongoose.Schema.Types.ObjectId,

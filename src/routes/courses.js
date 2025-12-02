@@ -14,6 +14,7 @@ const {
   unenrollFromCourse,
   getCourseStudents,
   uploadCourseImage,
+  removeCourseImage,
   getCourseReviews,
 } = require("../controllers/courseController");
 const { getCourseAvailability } = require("../controllers/classController");
@@ -53,22 +54,23 @@ const {
 
 const router = express.Router();
 
-// Rotas públicas (não requerem autenticação)
-router.get("/", validatePagination, validateSearchFilters, getAllCourses);
+// Rotas públicas (aceitam token opcional para retornar isFavorite quando presente)
+router.get("/", validatePagination, validateSearchFilters, optionalAuth, getAllCourses);
 
 router.get(
   "/search",
   validatePagination,
   courseValidators.search,
   handleValidationErrors,
+  optionalAuth,
   searchCourses
 );
 
-router.get("/categories", getCategories);
+router.get("/categories", optionalAuth, getCategories);
 
-router.get("/featured", getFeaturedCourses);
+router.get("/featured", optionalAuth, getFeaturedCourses);
 
-router.get("/popular", getPopularCourses);
+router.get("/popular", optionalAuth, getPopularCourses);
 
 // Rotas públicas com autenticação opcional
 router.get(
@@ -146,6 +148,8 @@ router.put(
   paramValidators.id,
   handleValidationErrors,
   requireCourseOwnership,
+  handleOptionalCourseImageUpload,
+  cleanupTempFiles,
   sanitizeInput,
   courseValidators.update,
   handleValidationErrors,
@@ -177,6 +181,14 @@ router.post(
   uploadMiddleware,
   cleanupTempFiles,
   uploadCourseImage
+);
+
+router.delete(
+  "/:id/image",
+  paramValidators.id,
+  handleValidationErrors,
+  requireCourseOwnership,
+  removeCourseImage
 );
 
 // Rotas de avaliações

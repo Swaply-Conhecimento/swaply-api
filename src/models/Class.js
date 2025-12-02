@@ -16,6 +16,11 @@ const classSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'ID do estudante é obrigatório']
   },
+  enrollment: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Enrollment',
+    default: null
+  },
   title: {
     type: String,
     trim: true,
@@ -47,15 +52,23 @@ const classSchema = new mongoose.Schema({
     enum: ['scheduled', 'confirmed', 'completed', 'cancelled', 'no-show'],
     default: 'scheduled'
   },
-  zoomLink: {
+  jitsiRoomName: {
     type: String,
     default: null
   },
-  zoomMeetingId: {
+  jitsiInstructorUrl: {
     type: String,
     default: null
   },
-  zoomPassword: {
+  jitsiStudentUrl: {
+    type: String,
+    default: null
+  },
+  jitsiInstructorToken: {
+    type: String,
+    default: null
+  },
+  jitsiStudentToken: {
     type: String,
     default: null
   },

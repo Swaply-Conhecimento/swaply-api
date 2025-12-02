@@ -9,6 +9,9 @@ const {
   rateClass,
   getUpcomingClasses,
   getClassHistory,
+  getClassAccessLink,
+  getInstructorAvailability,
+  getCourseAvailability,
 } = require("../controllers/classController");
 const {
   handleValidationErrors,
@@ -16,9 +19,13 @@ const {
   validatePagination,
   sanitizeInput,
 } = require("../middleware/validation");
+const { authenticate } = require("../middleware/auth");
 const { body, param, query } = require("express-validator");
 
 const router = express.Router();
+
+// Aplicar autenticação para todas as rotas abaixo
+router.use(authenticate);
 
 /**
  * POST /classes/schedule
@@ -38,6 +45,11 @@ router.post(
       .withMessage("Data é obrigatória")
       .isISO8601()
       .withMessage("Data inválida"),
+    body("time")
+      .notEmpty()
+      .withMessage("Horário é obrigatório")
+      .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .withMessage("Horário inválido (formato HH:MM)"),
     body("duration")
       .optional()
       .isFloat({ min: 0.5, max: 4 })
@@ -189,6 +201,63 @@ router.put(
   ],
   handleValidationErrors,
   rateClass
+);
+
+/**
+ * GET /classes/:id/access
+ * Obter link de acesso à sala virtual
+ */
+router.get(
+  "/:id/access",
+  [param("id").isMongoId().withMessage("ID da aula inválido")],
+  handleValidationErrors,
+  getClassAccessLink
+);
+
+/**
+ * GET /classes/instructor/:instructorId/availability
+ * Obter disponibilidade do instrutor
+ */
+router.get(
+  "/instructor/:instructorId/availability",
+  [
+    param("instructorId").isMongoId().withMessage("ID do instrutor inválido"),
+    query("startDate")
+      .notEmpty()
+      .withMessage("Data inicial é obrigatória")
+      .isISO8601()
+      .withMessage("Data inicial inválida"),
+    query("endDate")
+      .notEmpty()
+      .withMessage("Data final é obrigatória")
+      .isISO8601()
+      .withMessage("Data final inválida"),
+  ],
+  handleValidationErrors,
+  getInstructorAvailability
+);
+
+/**
+ * GET /classes/course/:courseId/availability
+ * Obter disponibilidade do curso
+ */
+router.get(
+  "/course/:courseId/availability",
+  [
+    param("courseId").isMongoId().withMessage("ID do curso inválido"),
+    query("startDate")
+      .notEmpty()
+      .withMessage("Data inicial é obrigatória")
+      .isISO8601()
+      .withMessage("Data inicial inválida"),
+    query("endDate")
+      .notEmpty()
+      .withMessage("Data final é obrigatória")
+      .isISO8601()
+      .withMessage("Data final inválida"),
+  ],
+  handleValidationErrors,
+  getCourseAvailability
 );
 
 module.exports = router;

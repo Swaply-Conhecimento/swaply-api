@@ -34,13 +34,13 @@ const checkExternalServices = async () => {
     console.log('📧 Email Service: ❌ ERRO - Configuração não encontrada');
   }
   
-  // Verificar API do Zoom
+  // Verificar API do Jitsi
   try {
-    const { checkApiStatus } = require('./src/services/zoomService');
-    const zoomStatus = await checkApiStatus();
-    console.log(`📹 Zoom API: ${zoomStatus.success ? '✅ OK' : '❌ ERRO'}`);
+    const { jitsiService } = require('./src/services/jitsiService');
+    const jitsiStatus = await jitsiService.checkStatus();
+    console.log(`📹 Jitsi Meet: ${jitsiStatus.success ? '✅ OK' : '❌ ERRO'}`);
   } catch (error) {
-    console.log('📹 Zoom API: ❌ ERRO - Configuração não encontrada');
+    console.log('📹 Jitsi Meet: ❌ ERRO - Configuração não encontrada');
   }
   
   // Verificar Cloudinary

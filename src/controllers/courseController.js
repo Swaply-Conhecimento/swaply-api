@@ -1,8 +1,9 @@
 const Course = require('../models/Course');
 const User = require('../models/User');
 const Review = require('../models/Review');
+const InstructorAvailability = require('../models/InstructorAvailability');
 const { uploadImage, deleteFile } = require('../middleware/upload');
-const { uploadImage: uploadImageToCloud, deleteImage } = require('../config/cloudinary');
+const { uploadImage: uploadImageToCloud, deleteImage, extractPublicIdFromUrl } = require('../config/cloudinary');
 const { validationResult } = require('express-validator');
 const { createApiResponse } = require('../utils/helpers');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -14,6 +15,175 @@ const mapCourseLanguage = (course) => {
     course.language = course.courseLanguage;
   }
   return course;
+};
+
+// Helper para sanitizar dados do curso antes de salvar
+const sanitizeCourseData = (data) => {
+  const sanitized = { ...data };
+
+  // Sanitizar features: converter de array de objetos para array de strings
+  if (sanitized.features && Array.isArray(sanitized.features)) {
+    const processedFeatures = [];
+    
+    sanitized.features.forEach(feature => {
+      if (typeof feature === 'string') {
+        // Tentar desstringificar se for JSON string
+        try {
+          const parsed = JSON.parse(feature);
+          if (Array.isArray(parsed)) {
+            // Se for array, adicionar cada item
+            parsed.forEach(item => {
+              if (typeof item === 'string' && item.trim()) {
+                processedFeatures.push(item.trim());
+              }
+            });
+          } else if (typeof parsed === 'string' && parsed.trim()) {
+            processedFeatures.push(parsed.trim());
+          }
+        } catch {
+          // Se não for JSON válido, usar como string
+          if (feature.trim()) {
+            processedFeatures.push(feature.trim());
+          }
+        }
+      } else if (typeof feature === 'object' && feature !== null) {
+        // Se for objeto, processar title ou description
+        const title = feature.title || feature.description || feature.name;
+        if (title) {
+          if (typeof title === 'string') {
+            // Se title for uma string JSON stringificada, desstringificar
+            try {
+              const parsed = JSON.parse(title);
+              if (Array.isArray(parsed)) {
+                parsed.forEach(item => {
+                  if (typeof item === 'string' && item.trim()) {
+                    processedFeatures.push(item.trim());
+                  }
+                });
+              } else if (typeof parsed === 'string' && parsed.trim()) {
+                processedFeatures.push(parsed.trim());
+              }
+            } catch {
+              // Se não for JSON, usar como string
+              if (title.trim()) {
+                processedFeatures.push(title.trim());
+              }
+            }
+          } else {
+            processedFeatures.push(String(title).trim());
+          }
+        }
+      } else if (feature !== null && feature !== undefined) {
+        const str = String(feature).trim();
+        if (str) {
+          processedFeatures.push(str);
+        }
+      }
+    });
+    
+    sanitized.features = processedFeatures.filter(f => f && f.trim() !== ''); // Remover vazios
+  }
+
+  // Helper para desstringificar arrays JSON aninhados
+  const parseNestedArray = (value) => {
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+          // Se o array contém strings JSON stringificadas, desstringificar recursivamente
+          return parsed.map(item => {
+            if (typeof item === 'string') {
+              try {
+                return JSON.parse(item);
+              } catch {
+                return item;
+              }
+            }
+            return item;
+          }).flat();
+        }
+        return [parsed];
+      } catch {
+        return [value];
+      }
+    }
+    return Array.isArray(value) ? value : [value];
+  };
+
+  // Sanitizar requirements: desstringificar se for JSON string
+  if (sanitized.requirements && Array.isArray(sanitized.requirements)) {
+    sanitized.requirements = sanitized.requirements
+      .map(req => parseNestedArray(req))
+      .flat()
+      .filter(r => r && String(r).trim() !== ''); // Remover vazios
+  }
+
+  // Sanitizar objectives: desstringificar se for JSON string
+  if (sanitized.objectives && Array.isArray(sanitized.objectives)) {
+    sanitized.objectives = sanitized.objectives
+      .map(obj => parseNestedArray(obj))
+      .flat()
+      .filter(o => o && String(o).trim() !== ''); // Remover vazios
+  }
+
+  // Sanitizar tags: desstringificar se for JSON string
+  if (sanitized.tags) {
+    // Se for string, tentar fazer parse
+    if (typeof sanitized.tags === 'string') {
+      try {
+        const parsed = JSON.parse(sanitized.tags);
+        sanitized.tags = Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        // Se não for JSON válido, tratar como string simples
+        sanitized.tags = [sanitized.tags];
+      }
+    }
+    
+    // Se for array, processar cada item
+    if (Array.isArray(sanitized.tags)) {
+      sanitized.tags = sanitized.tags
+        .map(tag => parseNestedArray(tag))
+        .flat()
+        .filter(t => t && String(t).trim() !== '') // Remover vazios
+        .map(t => String(t).toLowerCase().trim()); // Normalizar para lowercase
+    }
+  }
+
+  // Sanitizar pricing: desstringificar se for JSON string
+  if (sanitized.pricing) {
+    if (typeof sanitized.pricing === 'string') {
+      try {
+        sanitized.pricing = JSON.parse(sanitized.pricing);
+      } catch (error) {
+        console.warn('Erro ao fazer parse do pricing:', error.message);
+        // Se falhar o parse, tentar manter como está ou remover
+        delete sanitized.pricing;
+      }
+    }
+    // Validar estrutura do pricing
+    if (sanitized.pricing && typeof sanitized.pricing === 'object') {
+      // Garantir que singleClass e fullCourse sejam números
+      if (sanitized.pricing.singleClass !== undefined) {
+        sanitized.pricing.singleClass = Number(sanitized.pricing.singleClass);
+      }
+      if (sanitized.pricing.fullCourse !== undefined) {
+        sanitized.pricing.fullCourse = Number(sanitized.pricing.fullCourse);
+      }
+    }
+  }
+
+  // Sanitizar outros campos numéricos que podem vir como string
+  if (sanitized.pricePerHour !== undefined) {
+    sanitized.pricePerHour = Number(sanitized.pricePerHour);
+  }
+  if (sanitized.totalHours !== undefined) {
+    sanitized.totalHours = Number(sanitized.totalHours);
+  }
+  if (sanitized.maxStudents !== undefined) {
+    sanitized.maxStudents = Number(sanitized.maxStudents);
+  }
+
+  return sanitized;
 };
 
 // Listar todos os cursos com filtros
@@ -65,12 +235,18 @@ const getAllCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  // Preparar set de favoritos do usuário, se houver
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   // Adicionar informações calculadas
   const coursesWithInfo = courses.map(course => {
     const courseInfo = {
       ...course,
       totalPrice: course.pricePerHour * course.totalHours,
-      spotsAvailable: course.maxStudents - course.currentStudents
+      spotsAvailable: course.maxStudents - course.currentStudents,
+      isFavorite: favoriteSet.has(course._id.toString())
     };
     return mapCourseLanguage(courseInfo);
   });
@@ -113,10 +289,15 @@ const searchCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   const coursesWithInfo = courses.map(course => ({
     ...course,
     totalPrice: course.pricePerHour * course.totalHours,
-    spotsAvailable: course.maxStudents - course.currentStudents
+    spotsAvailable: course.maxStudents - course.currentStudents,
+    isFavorite: favoriteSet.has(course._id.toString())
   }));
 
   res.json(createApiResponse(
@@ -161,10 +342,15 @@ const getFeaturedCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   const coursesWithInfo = courses.map(course => ({
     ...course,
     totalPrice: course.pricePerHour * course.totalHours,
-    spotsAvailable: course.maxStudents - course.currentStudents
+    spotsAvailable: course.maxStudents - course.currentStudents,
+    isFavorite: favoriteSet.has(course._id.toString())
   }));
 
   res.json(createApiResponse(
@@ -184,10 +370,15 @@ const getPopularCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   const coursesWithInfo = courses.map(course => ({
     ...course,
     totalPrice: course.pricePerHour * course.totalHours,
-    spotsAvailable: course.maxStudents - course.currentStudents
+    spotsAvailable: course.maxStudents - course.currentStudents,
+    isFavorite: favoriteSet.has(course._id.toString())
   }));
 
   res.json(createApiResponse(
@@ -228,10 +419,16 @@ const getRecommendedCourses = asyncHandler(async (req, res) => {
     .limit(parseInt(limit))
     .lean();
 
+  // If requester is authenticated, build favorite set
+  const favoriteSet = new Set((req.user && Array.isArray(req.user.favorites))
+    ? req.user.favorites.map(f => f.toString())
+    : []);
+
   const coursesWithInfo = courses.map(course => ({
     ...course,
     totalPrice: course.pricePerHour * course.totalHours,
-    spotsAvailable: course.maxStudents - course.currentStudents
+    spotsAvailable: course.maxStudents - course.currentStudents,
+    isFavorite: favoriteSet.has(course._id.toString())
   }));
 
   res.json(createApiResponse(
@@ -257,6 +454,17 @@ const getCourseById = asyncHandler(async (req, res) => {
     ));
   }
 
+  // Buscar disponibilidade do curso
+  let availability = null;
+  try {
+    availability = await InstructorAvailability.findOne({
+      instructor: course.instructor._id,
+      course: course._id
+    }).lean();
+  } catch (err) {
+    console.warn('Erro ao buscar disponibilidade do curso:', err.message);
+  }
+
   // Adicionar informações calculadas
   const courseWithInfo = mapCourseLanguage({
     ...course,
@@ -265,7 +473,16 @@ const getCourseById = asyncHandler(async (req, res) => {
     isEnrolled: req.user ? course.enrolledStudents.some(
       student => student._id.toString() === req.user._id.toString()
     ) : false,
-    isFavorite: req.user ? req.user.favorites.includes(course._id) : false
+    isFavorite: req.user ? req.user.favorites.includes(course._id) : false,
+    availability: availability ? {
+      recurringAvailability: availability.recurringAvailability,
+      specificSlots: availability.specificSlots,
+      minAdvanceBooking: availability.minAdvanceBooking,
+      maxAdvanceBooking: availability.maxAdvanceBooking,
+      slotDuration: availability.slotDuration,
+      bufferTime: availability.bufferTime,
+      timezone: availability.timezone
+    } : null
   });
 
   res.json(createApiResponse(
@@ -294,9 +511,29 @@ const createCourse = asyncHandler(async (req, res) => {
 
   try {
     // Mapear 'language' para 'courseLanguage' para evitar conflito com MongoDB
-    const { language, ...restBody } = req.body;
+    let { language, availability, image, ...restBody } = req.body;
+    
+    // Remover campo image se vier como objeto vazio ou string vazia (não é arquivo)
+    // O upload de imagem real vem via req.file quando é multipart/form-data
+    if (image !== undefined && (image === null || image === '' || (typeof image === 'object' && Object.keys(image).length === 0))) {
+      delete restBody.image;
+    }
+    
+    // Parse availability se vier como string JSON
+    if (availability && typeof availability === 'string') {
+      try {
+        availability = JSON.parse(availability);
+      } catch (error) {
+        console.warn('Erro ao fazer parse do availability:', error.message);
+        availability = null;
+      }
+    }
+    
+    // Sanitizar dados antes de processar
+    const sanitizedData = sanitizeCourseData(restBody);
+    
     const courseData = {
-      ...restBody,
+      ...sanitizedData,
       instructor: req.user._id
     };
     
@@ -310,6 +547,7 @@ const createCourse = asyncHandler(async (req, res) => {
       try {
         const uploadResult = await uploadImageToCloud(req.file.path, 'swaply/courses');
         courseData.image = uploadResult.url;
+        courseData.imagePublicId = uploadResult.public_id;
       } catch (uploadError) {
         console.error('Erro ao fazer upload da imagem do curso:', {
           userId: req.user._id,
@@ -350,6 +588,44 @@ const createCourse = asyncHandler(async (req, res) => {
       // Não falha a criação do curso se a atualização de stats falhar
     }
 
+    // Criar ou atualizar disponibilidade para o curso se fornecida
+    if (availability) {
+      try {
+        // Usar findOneAndUpdate para evitar erro de chave duplicada
+        await InstructorAvailability.findOneAndUpdate(
+          {
+            instructor: req.user._id,
+            course: course._id
+          },
+          {
+            $set: {
+              instructor: req.user._id,
+              course: course._id,
+              recurringAvailability: availability.recurringAvailability || [],
+              specificSlots: availability.specificSlots || [],
+              minAdvanceBooking: availability.minAdvanceBooking || 2,
+              maxAdvanceBooking: availability.maxAdvanceBooking || 60,
+              slotDuration: availability.slotDuration || 1,
+              bufferTime: availability.bufferTime || 0,
+              timezone: availability.timezone || 'America/Sao_Paulo',
+              isActive: true
+            }
+          },
+          {
+            upsert: true, // Criar se não existir, atualizar se existir
+            new: true,
+            setDefaultsOnInsert: true
+          }
+        );
+      } catch (availabilityError) {
+        console.warn('Erro ao criar/atualizar disponibilidade do curso:', {
+          courseId: course._id,
+          error: availabilityError.message
+        });
+        // Não falha a criação do curso se a disponibilidade falhar
+      }
+    }
+
     const populatedCourse = await Course.findById(course._id)
       .populate('instructor', 'name avatar')
       .lean();
@@ -386,26 +662,133 @@ const updateCourse = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const course = req.course; // Vem do middleware requireCourseOwnership
 
+  // Sanitizar dados antes de processar
+  let { availability, language, image, ...restBody } = req.body;
+  
+  // Remover campo image se vier como objeto vazio ou string vazia (não é arquivo)
+  // O upload de imagem real vem via req.file quando é multipart/form-data
+  if (image !== undefined && (image === null || image === '' || (typeof image === 'object' && Object.keys(image).length === 0))) {
+    delete restBody.image;
+  }
+  
+  // Parse availability se vier como string JSON
+  if (availability && typeof availability === 'string') {
+    try {
+      availability = JSON.parse(availability);
+    } catch (error) {
+      console.warn('Erro ao fazer parse do availability:', error.message);
+      availability = null;
+    }
+  }
+  
+  const sanitizedData = sanitizeCourseData(restBody);
+
   // Atualizar campos permitidos
   const allowedFields = [
     'title', 'description', 'category', 'subcategory', 'level',
-    'pricePerHour', 'totalHours', 'maxStudents',
+    'pricePerHour', 'totalHours', 'maxStudents', 'pricing',
     'features', 'curriculum', 'schedule', 'requirements',
     'objectives', 'tags', 'status'
   ];
 
   allowedFields.forEach(field => {
-    if (req.body[field] !== undefined) {
-      course[field] = req.body[field];
+    if (sanitizedData[field] !== undefined) {
+      course[field] = sanitizedData[field];
     }
   });
   
   // Mapear 'language' para 'courseLanguage'
-  if (req.body.language !== undefined) {
-    course.courseLanguage = req.body.language;
+  if (language !== undefined) {
+    course.courseLanguage = language;
+  }
+
+  // Upload de imagem se fornecida
+  if (req.file) {
+    try {
+      // Deletar imagem anterior se existir
+      if (course.image) {
+        try {
+          // Usar imagePublicId se disponível, senão extrair da URL
+          const publicId = course.imagePublicId || extractPublicIdFromUrl(course.image);
+          if (publicId) {
+            await deleteImage(publicId);
+          }
+        } catch (deleteError) {
+          // Erro ao deletar imagem anterior - silencioso
+          console.warn('Erro ao deletar imagem anterior:', deleteError.message);
+        }
+      }
+
+      const uploadResult = await uploadImageToCloud(req.file.path, 'swaply/courses');
+      course.image = uploadResult.url;
+      course.imagePublicId = uploadResult.public_id;
+    } catch (uploadError) {
+      console.error('Erro ao fazer upload da imagem do curso:', {
+        userId: req.user._id,
+        courseId: course._id,
+        error: uploadError.message
+      });
+      throw new Error('Erro ao fazer upload da imagem do curso');
+    } finally {
+      await deleteFile(req.file.path).catch(() => {});
+    }
   }
 
   await course.save();
+
+  // Atualizar disponibilidade do curso se fornecida
+  if (availability) {
+    try {
+      // Construir objeto de atualização apenas com campos fornecidos
+      const updateData = {
+        instructor: req.user._id,
+        course: course._id,
+        isActive: true
+      };
+
+      if (availability.recurringAvailability !== undefined) {
+        updateData.recurringAvailability = availability.recurringAvailability;
+      }
+      if (availability.specificSlots !== undefined) {
+        updateData.specificSlots = availability.specificSlots;
+      }
+      if (availability.minAdvanceBooking !== undefined) {
+        updateData.minAdvanceBooking = availability.minAdvanceBooking;
+      }
+      if (availability.maxAdvanceBooking !== undefined) {
+        updateData.maxAdvanceBooking = availability.maxAdvanceBooking;
+      }
+      if (availability.slotDuration !== undefined) {
+        updateData.slotDuration = availability.slotDuration;
+      }
+      if (availability.bufferTime !== undefined) {
+        updateData.bufferTime = availability.bufferTime;
+      }
+      if (availability.timezone !== undefined) {
+        updateData.timezone = availability.timezone;
+      }
+
+      // Usar findOneAndUpdate para evitar erro de chave duplicada
+      await InstructorAvailability.findOneAndUpdate(
+        {
+          instructor: req.user._id,
+          course: course._id
+        },
+        { $set: updateData },
+        {
+          upsert: true, // Criar se não existir, atualizar se existir
+          new: true,
+          setDefaultsOnInsert: true
+        }
+      );
+    } catch (availabilityError) {
+      console.warn('Erro ao atualizar disponibilidade do curso:', {
+        courseId: course._id,
+        error: availabilityError.message
+      });
+      // Não falha a atualização do curso se a disponibilidade falhar
+    }
+  }
 
   const populatedCourse = await Course.findById(course._id)
     .populate('instructor', 'name avatar')
@@ -552,21 +935,26 @@ const uploadCourseImage = asyncHandler(async (req, res) => {
   const course = req.course; // Vem do middleware requireCourseOwnership
 
   try {
-    // Upload para Cloudinary
-    const result = await uploadImageToCloud(req.file.path, 'swaply/courses');
-
     // Deletar imagem anterior se existir
     if (course.image) {
       try {
-        const publicId = course.image.split('/').pop().split('.')[0];
-        await deleteImage(`swaply/courses/${publicId}`);
+        // Usar imagePublicId se disponível, senão extrair da URL
+        const publicId = course.imagePublicId || extractPublicIdFromUrl(course.image);
+        if (publicId) {
+          await deleteImage(publicId);
+        }
       } catch (deleteError) {
         // Erro ao deletar imagem anterior - silencioso
+        console.warn('Erro ao deletar imagem anterior:', deleteError.message);
       }
     }
 
+    // Upload para Cloudinary
+    const result = await uploadImageToCloud(req.file.path, 'swaply/courses');
+
     // Atualizar curso
     course.image = result.url;
+    course.imagePublicId = result.public_id;
     await course.save();
 
     // Limpar arquivo temporário
@@ -581,6 +969,48 @@ const uploadCourseImage = asyncHandler(async (req, res) => {
   } catch (error) {
     // Limpar arquivo temporário em caso de erro
     await deleteFile(req.file.path);
+    throw error;
+  }
+});
+
+// Remover imagem do curso
+const removeCourseImage = asyncHandler(async (req, res) => {
+  const course = req.course; // Vem do middleware requireCourseOwnership
+
+  if (!course.image) {
+    return res.status(400).json(createApiResponse(
+      false,
+      'Curso não possui imagem'
+    ));
+  }
+
+  try {
+    // Deletar do Cloudinary
+    const publicId = course.imagePublicId || extractPublicIdFromUrl(course.image);
+    if (publicId) {
+      try {
+        await deleteImage(publicId);
+      } catch (deleteError) {
+        console.warn('Erro ao deletar imagem do Cloudinary:', deleteError.message);
+        // Continuar mesmo se falhar a deleção no Cloudinary
+      }
+    }
+
+    // Remover do banco de dados
+    course.image = null;
+    course.imagePublicId = null;
+    await course.save();
+
+    res.json(createApiResponse(
+      true,
+      'Imagem do curso removida com sucesso'
+    ));
+
+  } catch (error) {
+    console.error('Erro ao remover imagem do curso:', {
+      courseId: course._id,
+      error: error.message
+    });
     throw error;
   }
 });
@@ -642,5 +1072,6 @@ module.exports = {
   unenrollFromCourse,
   getCourseStudents,
   uploadCourseImage,
+  removeCourseImage,
   getCourseReviews
 };

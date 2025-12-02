@@ -51,6 +51,43 @@ const uploadAvatar = async (filePath) => {
   }
 };
 
+// Função para extrair public_id de uma URL do Cloudinary
+const extractPublicIdFromUrl = (url) => {
+  if (!url) return null;
+  
+  try {
+    // URL do Cloudinary tem formato:
+    // https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{folder}/{public_id}.{ext}
+    // ou
+    // https://res.cloudinary.com/{cloud_name}/image/upload/{folder}/{public_id}.{ext}
+    
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    
+    // Encontrar o índice de 'upload'
+    const uploadIndex = pathParts.indexOf('upload');
+    if (uploadIndex === -1) return null;
+    
+    // Pegar tudo após 'upload' (pode ter 'v{version}' ou ir direto para o folder)
+    const afterUpload = pathParts.slice(uploadIndex + 1);
+    
+    // Se o primeiro elemento após 'upload' começa com 'v', é a versão, então pular
+    let startIndex = 0;
+    if (afterUpload[0] && afterUpload[0].startsWith('v')) {
+      startIndex = 1;
+    }
+    
+    // Juntar o resto (folder + public_id) e remover a extensão
+    const folderAndId = afterUpload.slice(startIndex).join('/');
+    const publicId = folderAndId.replace(/\.[^/.]+$/, ''); // Remove extensão
+    
+    return publicId;
+  } catch (error) {
+    console.warn('Erro ao extrair public_id da URL:', error.message);
+    return null;
+  }
+};
+
 // Função para deletar imagem
 const deleteImage = async (publicId) => {
   try {
@@ -65,5 +102,6 @@ module.exports = {
   cloudinary,
   uploadImage,
   uploadAvatar,
-  deleteImage
+  deleteImage,
+  extractPublicIdFromUrl
 };

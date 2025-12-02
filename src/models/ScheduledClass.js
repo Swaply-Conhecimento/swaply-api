@@ -96,6 +96,26 @@ const scheduledClassSchema = new mongoose.Schema({
   feedback: {
     type: String,
     maxlength: [500, 'Feedback não pode ter mais de 500 caracteres']
+  },
+  jitsiRoomName: {
+    type: String,
+    default: null
+  },
+  jitsiInstructorUrl: {
+    type: String,
+    default: null
+  },
+  jitsiStudentUrl: {
+    type: String,
+    default: null
+  },
+  jitsiInstructorToken: {
+    type: String,
+    default: null
+  },
+  jitsiStudentToken: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
@@ -235,38 +255,40 @@ scheduledClassSchema.statics.checkConflict = async function(instructorId, date, 
   const classStartTime = new Date(date);
   const classEndTime = new Date(date.getTime() + (duration * 60 * 60 * 1000));
 
-  const conflict = await this.findOne({
+  // Buscar todas as aulas do instrutor que estão agendadas ou em progresso
+  const existingClasses = await this.find({
     instructorId,
-    status: { $in: ['scheduled', 'in_progress'] },
-    $or: [
-      // Nova aula começa durante uma aula existente
-      {
-        date: { $lte: classStartTime },
-        $expr: {
-          $gte: [
-            { $add: ['$date', { $multiply: ['$duration', 3600000] }] },
-            classStartTime
-          ]
-        }
-      },
-      // Nova aula termina durante uma aula existente
-      {
-        date: { $lte: classEndTime },
-        $expr: {
-          $gte: [
-            { $add: ['$date', { $multiply: ['$duration', 3600000] }] },
-            classEndTime
-          ]
-        }
-      },
-      // Nova aula engloba uma aula existente
-      {
-        date: { $gte: classStartTime, $lte: classEndTime }
-      }
-    ]
-  });
+    status: { $in: ['scheduled', 'in_progress'] }
+  }).select('date duration status').lean();
 
-  return conflict !== null;
+  // Se não há aulas existentes, não há conflito
+  if (existingClasses.length === 0) {
+    return false;
+  }
+
+  // Verificar se há sobreposição de horários
+  for (const existingClass of existingClasses) {
+    const existingStart = new Date(existingClass.date);
+    const existingEnd = new Date(existingStart.getTime() + (existingClass.duration * 60 * 60 * 1000));
+
+    // Verificar sobreposição:
+    // 1. Nova aula começa durante uma aula existente
+    // 2. Nova aula termina durante uma aula existente
+    // 3. Nova aula engloba completamente uma aula existente
+    // 4. Aula existente engloba completamente a nova aula
+    const hasOverlap = (
+      (classStartTime >= existingStart && classStartTime < existingEnd) ||
+      (classEndTime > existingStart && classEndTime <= existingEnd) ||
+      (classStartTime <= existingStart && classEndTime >= existingEnd) ||
+      (classStartTime >= existingStart && classEndTime <= existingEnd)
+    );
+
+    if (hasOverlap) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 module.exports = mongoose.model('ScheduledClass', scheduledClassSchema);
