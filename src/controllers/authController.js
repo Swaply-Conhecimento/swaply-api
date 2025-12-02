@@ -50,8 +50,12 @@ const register = async (req, res) => {
     // Enviar email de boas-vindas e link para avaliação da plataforma
     try {
       await sendAccountCreatedEmail(user);
+      console.log(`✅ Email de boas-vindas enviado para: ${user.email}`);
+      
       await sendPlatformReviewEmail(user);
+      console.log(`✅ Email de avaliação da plataforma enviado para: ${user.email}`);
     } catch (emailError) {
+      console.error(`❌ Erro ao enviar emails para ${user.email}:`, emailError.message);
       // Não falha o registro se o email não funcionar
     }
 
