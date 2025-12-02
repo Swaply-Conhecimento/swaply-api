@@ -15,6 +15,7 @@ const courseRoutes = require("./routes/courses");
 const classRoutes = require("./routes/classes");
 const instructorRoutes = require("./routes/instructors");
 const notificationRoutes = require("./routes/notifications");
+const feedbackRoutes = require("./routes/feedback");
 
 const app = express();
 
@@ -130,6 +131,7 @@ app.use("/api/courses", courseRoutes);
 app.use("/api/classes", classRoutes);
 app.use("/api/instructors", instructorRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // Rota para servir arquivos estáticos (uploads)
 app.use("/uploads", express.static("uploads"));

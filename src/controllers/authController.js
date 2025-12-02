@@ -2,7 +2,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { generateToken, generateRefreshToken, verifyRefreshToken } = require('../middleware/auth');
-const { sendEmail, sendAccountCreatedEmail } = require('../services/emailService');
+const { sendEmail, sendAccountCreatedEmail, sendPlatformReviewEmail } = require('../services/emailService');
+const NotificationService = require('../services/notificationService');
 const { validationResult } = require('express-validator');
 
 // Registrar usuário
@@ -46,11 +47,27 @@ const register = async (req, res) => {
 
     await user.save();
 
-    // Enviar email de boas-vindas
+    // Enviar email de boas-vindas e link para avaliação da plataforma
     try {
       await sendAccountCreatedEmail(user);
+      await sendPlatformReviewEmail(user);
     } catch (emailError) {
       // Não falha o registro se o email não funcionar
+    }
+
+    // Criar notificação in-app para avaliação da plataforma (não bloqueante)
+    try {
+      await NotificationService.createSystemNotification(
+        user._id,
+        'Avalie a plataforma',
+        'Conte para nós como está sendo sua experiência com o Swaply.',
+        {
+          url: '/feedback/plataforma',
+          action: 'open_platform_review'
+        }
+      );
+    } catch (notificationError) {
+      // Notificação falhou, mas não deve impedir o cadastro
     }
 
     // Gerar tokens

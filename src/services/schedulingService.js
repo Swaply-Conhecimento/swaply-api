@@ -395,7 +395,7 @@ class SchedulingService {
         }
       });
 
-      // Emails
+      // Emails principais de agendamento
       await emailService.sendClassScheduledEmail({
         to: scheduledClass.studentId.email,
         studentName: student.name,
@@ -413,6 +413,35 @@ class SchedulingService {
         date: scheduledClass.date,
         duration: scheduledClass.duration
       });
+
+      // Notificação para incentivar avaliação do curso/instrutor após a aula
+      try {
+        await notificationService.createSystemNotification(
+          scheduledClass.studentId._id,
+          'Avalie seu curso',
+          `Depois de concluir sua aula de ${course.title}, avalie o curso e o instrutor.`,
+          {
+            courseId: course._id.toString(),
+            url: `/courses/${course._id}?review=1`,
+            action: 'review_course'
+          }
+        );
+      } catch (notificationError) {
+        // Erro ao criar notificação de avaliação - silencioso
+      }
+
+      // E-mail opcional para lembrar da avaliação do curso/instrutor
+      try {
+        await emailService.sendCourseReviewRequestEmail({
+          to: scheduledClass.studentId.email,
+          studentName: student.name,
+          courseTitle: course.title,
+          instructorName: scheduledClass.instructorId.name,
+          courseId: course._id
+        });
+      } catch (reviewEmailError) {
+        // Erro ao enviar email de avaliação - silencioso
+      }
     } catch (error) {
       // Erro ao enviar notificações de agendamento - silencioso
     }

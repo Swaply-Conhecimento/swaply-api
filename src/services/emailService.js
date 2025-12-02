@@ -575,6 +575,88 @@ const emailTemplates = {
         </div>
       </div>
     `
+  },
+
+  // Solicitação de avaliação da plataforma
+  platformReviewRequest: {
+    subject: 'Como está sendo sua experiência no Swaply? 💬',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Queremos ouvir você 💙</h1>
+          <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Sua opinião ajuda a melhorar o Swaply</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: white;">
+          <h2 style="color: #333; margin-bottom: 20px;">Olá, {{name}}!</h2>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            Você acabou de criar sua conta no Swaply e gostaríamos muito de saber como foi sua experiência até aqui.
+          </p>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            Em menos de <strong>1 minuto</strong>, você pode nos contar o que está achando da plataforma e nos ajudar a evoluir.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{platformReviewUrl}}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+              Avaliar Plataforma
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; line-height: 1.6; text-align: center;">
+            Obrigado por fazer parte da comunidade Swaply! Sua opinião é muito importante para nós.
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px 30px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Swaply. Todos os direitos reservados.
+          </p>
+        </div>
+      </div>
+    `
+  },
+
+  // Solicitação de avaliação de curso/instrutor após compra/agendamento
+  courseReviewRequest: {
+    subject: 'Avalie o curso {{courseTitle}} e seu instrutor ⭐',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Como foi sua experiência?</h1>
+          <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Avalie o curso e o instrutor</p>
+        </div>
+        
+        <div style="padding: 40px 30px; background: white;">
+          <h2 style="color: #333; margin-bottom: 20px;">Olá, {{studentName}}!</h2>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            Esperamos que sua aula do curso <strong>{{courseTitle}}</strong> com <strong>{{instructorName}}</strong> tenha sido incrível!
+          </p>
+          
+          <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            Sua avaliação ajuda outros estudantes a escolherem melhor e também orienta os instrutores a melhorarem continuamente.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{courseReviewUrl}}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+              Avaliar Curso e Instrutor
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 14px; line-height: 1.6; text-align: center;">
+            Leva menos de 1 minuto e faz muita diferença para a comunidade Swaply.
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px 30px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} Swaply. Todos os direitos reservados.
+          </p>
+        </div>
+      </div>
+    `
   }
 };
 
@@ -670,6 +752,22 @@ const sendAccountDeletedEmail = async (user) => {
       joinDate: new Date(user.joinDate || user.createdAt).toLocaleDateString('pt-BR'),
       deletionDate: new Date().toLocaleDateString('pt-BR'),
       signupUrl: `${process.env.FRONTEND_URL}/register`
+    }
+  });
+};
+
+// Função para enviar solicitação de avaliação da plataforma
+const sendPlatformReviewEmail = async (user) => {
+  const platformReviewUrl =
+    process.env.PLATFORM_REVIEW_URL ||
+    `${process.env.FRONTEND_URL}/feedback/plataforma`;
+
+  return await sendEmail({
+    to: user.email,
+    template: 'platformReviewRequest',
+    data: {
+      name: user.name,
+      platformReviewUrl
     }
   });
 };
@@ -871,6 +969,22 @@ const sendInstructorReminderEmail = async ({ to, instructorName, studentName, co
   });
 };
 
+// Função para enviar solicitação de avaliação de curso/instrutor
+const sendCourseReviewRequestEmail = async ({ to, studentName, courseTitle, instructorName, courseId }) => {
+  const courseReviewUrl = `${process.env.FRONTEND_URL}/courses/${courseId}?review=1`;
+
+  return await sendEmail({
+    to,
+    template: 'courseReviewRequest',
+    data: {
+      studentName,
+      courseTitle,
+      instructorName: instructorName || '',
+      courseReviewUrl
+    }
+  });
+};
+
 module.exports = {
   sendEmail,
   sendWelcomeEmail,
@@ -887,5 +1001,7 @@ module.exports = {
   sendInstructorCancellationNotification,
   sendClassReminderEmail,
   sendInstructorReminderEmail,
+  sendPlatformReviewEmail,
+  sendCourseReviewRequestEmail,
   emailTemplates
 };
