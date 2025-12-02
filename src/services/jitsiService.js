@@ -39,8 +39,10 @@ MzEfYyjiWA4R4/M2bS1+fWIcPm15j7A1U3W+KXWF9j8KcwQge6rODbdJ0fDKE8k
    */
   generateToken({ userId, userName, userEmail, userAvatar, roomName, moderator = false }) {
     const now = new Date();
-    const exp = Math.round(now.setHours(now.getHours() + 3) / 1000); // Token válido por 3 horas
-    const nbf = Math.round(new Date().getTime() / 1000) - 10; // Válido desde 10 segundos atrás
+    // Token válido por 3 horas (calculado de forma segura)
+    const exp = Math.round((now.getTime() + (3 * 60 * 60 * 1000)) / 1000);
+    // Válido desde 10 segundos atrás (para evitar problemas de sincronização de relógio)
+    const nbf = Math.round(now.getTime() / 1000) - 10;
 
     const payload = {
       aud: 'jitsi',
@@ -76,9 +78,24 @@ MzEfYyjiWA4R4/M2bS1+fWIcPm15j7A1U3W+KXWF9j8KcwQge6rODbdJ0fDKE8k
         }
       });
 
+      // Log para debug (apenas em desenvolvimento)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Token Jitsi gerado com sucesso:', {
+          roomName,
+          moderator,
+          exp: new Date(exp * 1000).toISOString(),
+          tokenLength: token.length
+        });
+      }
+
       return token;
     } catch (error) {
-      console.error('Erro ao gerar token Jitsi:', error);
+      console.error('❌ Erro ao gerar token Jitsi:', error);
+      console.error('Detalhes:', {
+        hasPrivateKey: !!this.privateKey,
+        appId: this.appId,
+        apiKey: this.apiKey ? 'configurado' : 'não configurado'
+      });
       throw new Error('Erro ao gerar token de autenticação para reunião');
     }
   }
@@ -118,6 +135,16 @@ MzEfYyjiWA4R4/M2bS1+fWIcPm15j7A1U3W+KXWF9j8KcwQge6rODbdJ0fDKE8k
       const instructorUrl = this.buildMeetingUrl(roomName, instructorToken);
       const studentUrl = this.buildMeetingUrl(roomName, studentToken);
 
+      // Log para debug (apenas em desenvolvimento)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Sala Jitsi criada:', {
+          roomName,
+          instructorUrl: instructorUrl.substring(0, 80) + '...',
+          studentUrl: studentUrl.substring(0, 80) + '...',
+          course: course.title
+        });
+      }
+
       return {
         success: true,
         data: {
@@ -144,7 +171,8 @@ MzEfYyjiWA4R4/M2bS1+fWIcPm15j7A1U3W+KXWF9j8KcwQge6rODbdJ0fDKE8k
       };
 
     } catch (error) {
-      console.error('Erro ao criar reunião Jitsi:', error);
+      console.error('❌ Erro ao criar reunião Jitsi:', error);
+      console.error('Stack trace:', error.stack);
       throw new Error('Erro ao criar sala de reunião');
     }
   }
@@ -160,6 +188,8 @@ MzEfYyjiWA4R4/M2bS1+fWIcPm15j7A1U3W+KXWF9j8KcwQge6rODbdJ0fDKE8k
 
   /**
    * Construir URL da reunião
+   * Formato para Jitsi JaaS: https://8x8.vc/{appId}/{roomName}?jwt={token}
+   * Mantido formato original que estava funcionando
    */
   buildMeetingUrl(roomName, token) {
     return `https://${this.baseUrl}/${this.appId}/${roomName}?jwt=${token}`;
@@ -197,23 +227,69 @@ MzEfYyjiWA4R4/M2bS1+fWIcPm15j7A1U3W+KXWF9j8KcwQge6rODbdJ0fDKE8k
    */
   validateConfiguration() {
     const errors = [];
+    const warnings = [];
+    const isProduction = process.env.NODE_ENV === 'production';
 
+    // Em desenvolvimento, valores de exemplo são apenas avisos
+    // Em produção, são erros
     if (!this.appId) {
-      errors.push('JITSI_APP_ID não configurado');
+      if (isProduction) {
+        errors.push('JITSI_APP_ID não configurado');
+      } else {
+        warnings.push('JITSI_APP_ID não configurado');
+      }
+    } else if (this.appId === 'vpaas-magic-cookie-92f6a20f50ca4b35a59461e87c851d63') {
+      if (isProduction) {
+        errors.push('JITSI_APP_ID está usando valor de exemplo (não funcionará em produção)');
+      } else {
+        warnings.push('JITSI_APP_ID está usando valor de exemplo');
+      }
     }
 
     if (!this.apiKey) {
-      errors.push('JITSI_API_KEY não configurado');
+      if (isProduction) {
+        errors.push('JITSI_API_KEY não configurado');
+      } else {
+        warnings.push('JITSI_API_KEY não configurado');
+      }
+    } else if (this.apiKey === 'vpaas-magic-cookie-92f6a20f50ca4b35a59461e87c851d63/863847') {
+      if (isProduction) {
+        errors.push('JITSI_API_KEY está usando valor de exemplo (não funcionará em produção)');
+      } else {
+        warnings.push('JITSI_API_KEY está usando valor de exemplo');
+      }
     }
 
-    if (!this.privateKey || this.privateKey.includes('MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7VJTUt9Us8cKj')) {
-      errors.push('JITSI_PRIVATE_KEY não configurado ou usando chave de exemplo');
+    // Verificar se a chave privada é válida
+    if (!this.privateKey) {
+      if (isProduction) {
+        errors.push('JITSI_PRIVATE_KEY não configurado');
+      } else {
+        warnings.push('JITSI_PRIVATE_KEY não configurado');
+      }
+    } else if (this.privateKey.includes('MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7VJTUt9Us8cKj')) {
+      if (isProduction) {
+        errors.push('JITSI_PRIVATE_KEY está usando chave de exemplo (não funcionará em produção)');
+      } else {
+        warnings.push('JITSI_PRIVATE_KEY está usando chave de exemplo');
+      }
+    } else if (!this.privateKey.includes('BEGIN PRIVATE KEY') && !this.privateKey.includes('BEGIN RSA PRIVATE KEY')) {
+      warnings.push('JITSI_PRIVATE_KEY pode estar em formato incorreto');
+    }
+
+    // Verificar formato do appId e apiKey (apenas avisos)
+    if (this.appId && !this.appId.includes('vpaas-magic-cookie')) {
+      warnings.push('JITSI_APP_ID não parece ser um formato válido de Jitsi JaaS');
+    }
+
+    if (this.apiKey && !this.apiKey.includes('/')) {
+      warnings.push('JITSI_API_KEY deve incluir o appId e o ID separados por "/"');
     }
 
     return {
       valid: errors.length === 0,
       errors,
-      warnings: errors.length > 0 ? ['Configure as variáveis de ambiente do Jitsi'] : []
+      warnings
     };
   }
 
