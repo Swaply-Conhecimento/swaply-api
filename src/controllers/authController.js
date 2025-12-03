@@ -29,8 +29,9 @@ const register = async (req, res) => {
       });
     }
 
-    // Verificar se usuário já existe
-    const existingUser = await User.findOne({ email });
+    // Verificar se usuário já existe (normalizar email para evitar duplicatas)
+    const normalizedEmail = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -41,46 +42,36 @@ const register = async (req, res) => {
     // Criar usuário
     const user = new User({
       name,
-      email,
+      email: normalizedEmail, // Usar email normalizado
       password
     });
 
-    await user.save();
-
-    // Enviar email de boas-vindas e link para avaliação da plataforma
     try {
-      await sendAccountCreatedEmail(user);
-      console.log(`✅ Email de boas-vindas enviado para: ${user.email}`);
-      
-      await sendPlatformReviewEmail(user);
-      console.log(`✅ Email de avaliação da plataforma enviado para: ${user.email}`);
-    } catch (emailError) {
-      console.error(`❌ Erro ao enviar emails para ${user.email}:`, emailError.message);
-      // Não falha o registro se o email não funcionar
-    }
-
-    // Criar notificação in-app para avaliação da plataforma (não bloqueante)
-    try {
-      await NotificationService.createSystemNotification(
-        user._id,
-        'Avalie a plataforma',
-        'Conte para nós como está sendo sua experiência com o Swaply.',
-        {
-          url: '/feedback/plataforma',
-          action: 'open_platform_review'
+      await user.save();
+    } catch (saveError) {
+      // Tratar erro de duplicação do MongoDB (race condition)
+      if (saveError.code === 11000) {
+        // Verificar novamente se realmente existe (pode ter sido criado entre a verificação e o save)
+        const duplicateUser = await User.findOne({ email: normalizedEmail });
+        if (duplicateUser) {
+          return res.status(400).json({
+            success: false,
+            message: 'E-mail já está em uso'
+          });
         }
-      );
-    } catch (notificationError) {
-      // Notificação falhou, mas não deve impedir o cadastro
+      }
+      // Se não for erro de duplicação, relançar o erro
+      throw saveError;
     }
 
-    // Gerar tokens
+    // Gerar tokens ANTES de enviar emails (resposta rápida)
     const token = generateToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
     // Remover senha da resposta
     const userResponse = user.getPublicProfile();
 
+    // Enviar resposta IMEDIATAMENTE (não espera emails)
     res.status(201).json({
       success: true,
       message: 'Usuário registrado com sucesso',
@@ -90,6 +81,35 @@ const register = async (req, res) => {
         refreshToken
       }
     });
+
+    // Enviar emails de forma ASSÍNCRONA (não bloqueia resposta)
+    // Fire and forget - não espera conclusão
+    (async () => {
+      try {
+        await sendAccountCreatedEmail(user);
+        console.log(`✅ Email de boas-vindas enviado para: ${user.email}`);
+        
+        await sendPlatformReviewEmail(user);
+        console.log(`✅ Email de avaliação da plataforma enviado para: ${user.email}`);
+      } catch (emailError) {
+        console.error(`❌ Erro ao enviar emails para ${user.email}:`, emailError.message);
+      }
+
+      // Criar notificação in-app para avaliação da plataforma (não bloqueante)
+      try {
+        await NotificationService.createSystemNotification(
+          user._id,
+          'Avalie a plataforma',
+          'Conte para nós como está sendo sua experiência com o Swaply.',
+          {
+            url: '/feedback/plataforma',
+            action: 'open_platform_review'
+          }
+        );
+      } catch (notificationError) {
+        console.error(`❌ Erro ao criar notificação:`, notificationError.message);
+      }
+    })();
   } catch (error) {
     res.status(500).json({
       success: false,

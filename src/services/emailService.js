@@ -4,18 +4,40 @@ const path = require('path');
 
 // Configuração do transporter
 const createTransporter = () => {
-  return nodemailer.createTransport({
+  const port = parseInt(process.env.EMAIL_PORT) || 587;
+  const secure = port === 465;
+
+  const config = {
     host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT || 587,
-    secure: false, // true para 465, false para outras portas
+    port: port,
+    secure: secure, // true para 465, false para outras portas
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
     },
     tls: {
-      rejectUnauthorized: false
-    }
-  });
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3'
+    },
+    // Timeouts para evitar travamento no Render
+    connectionTimeout: 10000, // 10 segundos
+    greetingTimeout: 10000,
+    socketTimeout: 10000
+  };
+
+  // Log para debug (se DEBUG_EMAIL estiver configurado)
+  if (process.env.DEBUG_EMAIL === 'true') {
+    console.log('📧 Configuração SMTP:', {
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      user: config.auth.user,
+      hasPass: !!config.auth.pass,
+      environment: process.env.NODE_ENV
+    });
+  }
+
+  return nodemailer.createTransport(config);
 };
 
 // Templates de email
@@ -702,10 +724,28 @@ const replaceTemplateVariables = (template, data) => {
 // Função principal para enviar email
 const sendEmail = async ({ to, subject, template, data = {}, attachments = [] }) => {
   try {
+    // Verificar se variáveis estão configuradas
+    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      const errorMsg = 'Configuração de email incompleta no ambiente';
+      console.error('❌', errorMsg, {
+        hasHost: !!process.env.EMAIL_HOST,
+        hasUser: !!process.env.EMAIL_USER,
+        hasPass: !!process.env.EMAIL_PASS,
+        environment: process.env.NODE_ENV
+      });
+      throw new Error(errorMsg);
+    }
+
     const transporter = createTransporter();
     
     // Verificar conexão
+    if (process.env.DEBUG_EMAIL === 'true') {
+      console.log('📧 Verificando conexão SMTP...');
+    }
     await transporter.verify();
+    if (process.env.DEBUG_EMAIL === 'true') {
+      console.log('✅ Conexão SMTP verificada com sucesso');
+    }
     
     let htmlContent = '';
     let emailSubject = subject;
@@ -744,6 +784,20 @@ const sendEmail = async ({ to, subject, template, data = {}, attachments = [] })
     };
     
   } catch (error) {
+    // Log detalhado do erro
+    console.error('❌ Erro ao enviar email:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      user: process.env.EMAIL_USER,
+      hasPass: !!process.env.EMAIL_PASS,
+      environment: process.env.NODE_ENV,
+      stack: process.env.DEBUG_EMAIL === 'true' ? error.stack : undefined
+    });
+    
     throw new Error(`Falha ao enviar email: ${error.message}`);
   }
 };
